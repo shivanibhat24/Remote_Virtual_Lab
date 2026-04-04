@@ -61,7 +61,7 @@ from themes   import T, THEMES, set_theme, Theme
 from styles   import (build_stylesheet, _mono_font, _ui_font,
                       SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG,
                       SZ_STAT, SZ_SETPT, SZ_BIG)
-from widgets  import ThemeLabel, ThemeCard, _HeaderStrip, make_header
+from widgets  import ThemeLabel, ThemeCard, _HeaderStrip, make_header, LocalLoggerWidget
 from data_engine    import (CommandBuilder, DataParser,
                              DataLogger, AnalyticsEngine, ParsedMessage)
 from serial_manager import SerialManager
