@@ -1,0 +1,188 @@
+"""
+tab_funcgen.py - Function Generator tab for STM32 Lab GUI v6.0
+"""
+
+from typing import Optional
+
+import numpy as np
+import pyqtgraph as pg
+
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout,
+    QPushButton, QComboBox, QSpinBox, QSlider, QGroupBox
+)
+from PyQt5.QtCore import Qt, pyqtSignal
+
+from themes  import T
+from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
+from widgets import _HeaderStrip, make_header
+from data_engine import CommandBuilder
+
+
+class FunctionGenTab(QWidget):
+    send_requested = pyqtSignal(str)
+
+    WAVE_MAP = {
+        "Square": "SQ", "Triangle": "TR", "Sawtooth": "SAW", 
+        "Parabola": "PA", "Noise": "NOS", "Ground": "G"
+    }
+    _WAVE_COLOR_ATTRS = {
+        "Square":   "ACCENT_BLUE",
+        "Triangle": "PRIMARY",
+        "Sawtooth": "ACCENT_CYAN",
+        "Parabola": "ACCENT_AMBER",
+        "Noise":    "ACCENT_RED",
+        "Ground":   "TEXT_MUTED",
+    }
+
+    def __init__(self):
+        super().__init__()
+        self._current_wave = "Square"
+        self._header_strip: Optional[_HeaderStrip] = None
+        self._build_ui()
+
+    def _build_ui(self):
+        root = QVBoxLayout(self)
+        root.setSpacing(0)
+        root.setContentsMargins(0, 0, 0, 0)
+
+        hdr, _ = make_header("Function Generator")
+        self._header_strip = hdr
+        root.addWidget(hdr)
+
+        content = QWidget()
+        c_lay   = QVBoxLayout(content)
+        c_lay.setContentsMargins(16, 16, 16, 16)
+        c_lay.setSpacing(16)
+        root.addWidget(content, stretch=1)
+
+        # -- Waveform selector -------------------------------------------------
+        wave_grp = QGroupBox("WAVEFORM TYPE")
+        wg_lay   = QVBoxLayout(wave_grp)
+        wg_lay.setSpacing(10)
+        wg_lay.setContentsMargins(14, 22, 14, 14)
+        c_lay.addWidget(wave_grp)
+
+        btn_row = QHBoxLayout()
+        wg_lay.addLayout(btn_row)
+        self._wave_btns: dict = {}
+        for name in self.WAVE_MAP:
+            btn = QPushButton(name.upper())
+            btn.setCheckable(True)
+            btn.setFixedHeight(42)
+            col = getattr(T, self._WAVE_COLOR_ATTRS[name], T.PRIMARY)
+            btn.setStyleSheet(self._wave_btn_style(col))
+            btn.clicked.connect(lambda _, n=name: self._select_wave(n))
+            btn_row.addWidget(btn)
+            self._wave_btns[name] = btn
+
+        pg.setConfigOption("background", T.CARD_BG)
+        pg.setConfigOption("foreground", T.TEXT_MUTED)
+        self._wave_preview = pg.PlotWidget()
+        self._wave_preview.setFixedHeight(130)
+        self._wave_preview.hideAxis("left")
+        self._wave_preview.hideAxis("bottom")
+        self._wave_preview.setBackground(T.CARD_BG)
+        self._wave_preview.setMouseEnabled(x=False, y=False)
+        self._preview_curve = self._wave_preview.plot(
+            pen=pg.mkPen(T.ACCENT_BLUE, width=2.5))
+        wg_lay.addWidget(self._wave_preview)
+
+        # -- Frequency control -------------------------------------------------
+        freq_grp = QGroupBox("FREQUENCY")
+        fg_lay   = QVBoxLayout(freq_grp)
+        fg_lay.setSpacing(10)
+        fg_lay.setContentsMargins(14, 22, 14, 14)
+        c_lay.addWidget(freq_grp)
+
+        freq_row = QHBoxLayout()
+        fg_lay.addLayout(freq_row)
+        self.sld_freq = QSlider(Qt.Horizontal)
+        self.sld_freq.setRange(0, 1000)
+        self.sld_freq.setValue(100)
+        freq_row.addWidget(self.sld_freq, stretch=1)
+        self.spin_freq = QSpinBox()
+        self.spin_freq.setRange(0, 1000)
+        self.spin_freq.setValue(100)
+        self.spin_freq.setSuffix(" Hz")
+        self.spin_freq.setFixedWidth(110)
+        freq_row.addWidget(self.spin_freq)
+
+        self.spin_freq.valueChanged.connect(self.sld_freq.setValue)
+        self.sld_freq.valueChanged.connect(self.spin_freq.setValue)
+        self.spin_freq.valueChanged.connect(self._update_preview)
+
+        ctrl_row = QHBoxLayout()
+        fg_lay.addLayout(ctrl_row)
+
+        self.btn_send = QPushButton("APPLY SETTINGS")
+        self.btn_send.setFixedHeight(42)
+        self.btn_send.clicked.connect(self._on_send)
+        ctrl_row.addWidget(self.btn_send, stretch=2)
+
+        self.btn_pulse = QPushButton("SINGLE PULSE")
+        self.btn_pulse.setObjectName("btn_warning")
+        self.btn_pulse.setFixedHeight(42)
+        self.btn_pulse.setToolTip("Trigger a single waveform cycle (One-shot)")
+        self.btn_pulse.clicked.connect(self._on_pulse)
+        ctrl_row.addWidget(self.btn_pulse, stretch=1)
+
+        c_lay.addStretch()
+        self._select_wave("Square")
+
+    # -- Helpers ---------------------------------------------------------------
+
+    @staticmethod
+    def _wave_btn_style(col: str) -> str:
+        return f"""
+            QPushButton {{
+                color:{col}; border:1px solid {col}; background:transparent;
+                font-size:{SZ_SM}px; font-weight:700; font-family:{T.FONT_UI};
+            }}
+            QPushButton:checked {{ background:{col}; color:{T.DARK_BG}; }}
+            QPushButton:hover   {{ background:{col}33; }}
+        """
+
+    def update_theme(self):
+        if self._header_strip:
+            self._header_strip.update_theme()
+        self._wave_preview.setBackground(T.CARD_BG)
+        for name, btn in self._wave_btns.items():
+            col = getattr(T, self._WAVE_COLOR_ATTRS[name], T.PRIMARY)
+            btn.setStyleSheet(self._wave_btn_style(col))
+        self._update_preview()
+
+    def _select_wave(self, name: str):
+        for n, b in self._wave_btns.items():
+            b.setChecked(n == name)
+        self._current_wave = name
+        self._update_preview()
+
+    def _update_preview(self):
+        name  = self._current_wave
+        freq  = self.spin_freq.value() or 1
+        t     = np.linspace(0, 2 / freq, 500)
+        phase = 2 * np.pi * freq * t
+        if name == "Square":
+            y = np.sign(np.sin(phase))
+        elif name == "Triangle":
+            y = 2 * np.arcsin(np.sin(phase)) / np.pi
+        elif name == "Sawtooth":
+            y = 2 * (t * freq - np.floor(0.5 + t * freq))
+        elif name == "Parabola":
+            y = np.sin(phase) ** 2 * np.sign(np.sin(phase))
+        elif name == "Noise":
+            y = np.random.normal(0, 0.4, size=len(t))
+        else:
+            y = np.zeros_like(t)
+        col = getattr(T, self._WAVE_COLOR_ATTRS.get(name, "PRIMARY"), T.PRIMARY)
+        self._preview_curve.setPen(pg.mkPen(col, width=2.5))
+        self._preview_curve.setData(t, y)
+
+    def _on_send(self):
+        self.send_requested.emit(CommandBuilder.wave_type(self.WAVE_MAP[self._current_wave]))
+        self.send_requested.emit(CommandBuilder.wave_freq(self.spin_freq.value()))
+
+    def _on_pulse(self):
+        """Trigger a single pulse command."""
+        self.send_requested.emit("#FG_PULSE:1")
