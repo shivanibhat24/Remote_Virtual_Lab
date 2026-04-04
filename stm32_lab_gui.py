@@ -458,29 +458,33 @@ class MainWindow(QMainWindow):
         self.splitter.setSizes([200, 1000])
 
         # -- Instantiate all tabs -------------------------------------------
-        self.tab_mm       = MultimeterTab(self._analytics, screenshot_provider=self._ensure_screenshot_dir)
-        self.tab_fg       = FunctionGenTab()
-        self.tab_vreg     = VoltageRegTab()
+        self.tab_mm       = MultimeterTab(
+            self._analytics,
+            screenshot_provider=self._ensure_screenshot_dir,
+            settings=self._settings,
+        )
+        self.tab_fg       = FunctionGenTab(settings=self._settings)
+        self.tab_vreg     = VoltageRegTab(settings=self._settings)
         self.tab_cloud    = CloudTab(self._server)
         self.tab_conn     = ConnectionTab()
-        self.tab_bode     = BodePlotTab()
-        self.tab_trig     = TriggerTab()
+        self.tab_bode     = BodePlotTab(settings=self._settings)
+        self.tab_trig     = TriggerTab(settings=self._settings)
         self.tab_dsp      = DSPPipelineTab()
-        self.tab_proto    = ProtocolDecoderTab()
+        self.tab_proto    = ProtocolDecoderTab(settings=self._settings)
         self.tab_playback = PlaybackTab()
         self.tab_repl     = REPLTab()
         self.tab_nlcmd    = NLCommandTab()
-        self.tab_wavedb   = WaveformDBTab()
-        self.tab_pid      = PidTunerTab()
-        self.tab_anomaly  = AnomalyDetectorTab()
-        self.tab_cal      = CalibrationWizard()
+        self.tab_wavedb   = WaveformDBTab(settings=self._settings)
+        self.tab_pid      = PidTunerTab(settings=self._settings)
+        self.tab_anomaly  = AnomalyDetectorTab(settings=self._settings)
+        self.tab_cal      = CalibrationWizard(settings=self._settings)
         self.tab_journal  = JournalTab()
         # v6.0 new tabs
-        self.tab_uncertainty = UncertaintyTab()
+        self.tab_uncertainty = UncertaintyTab(settings=self._settings)
         self.tab_scpi        = SCPITab()
-        self.tab_power       = PowerProfileTab()
+        self.tab_power       = PowerProfileTab(settings=self._settings)
         self.tab_prodtest    = ProdTestTab()
-        self.tab_mathchan    = MathChannelsTab()
+        self.tab_mathchan    = MathChannelsTab(settings=self._settings)
 
         # -- Add tabs to Sidebar -----------------------------------------------
         def add_category(name):
@@ -864,6 +868,7 @@ class MainWindow(QMainWindow):
             if not hasattr(self, "_dsp_overlay_curve"):
                 self._dsp_overlay_curve = self.tab_mm.plot_widget.plot(
                     pen=pg.mkPen(T.ACCENT_PUR, width=1.5, style=Qt.DashLine))
+                self.tab_mm.register_external_overlay("dsp", self._dsp_overlay_curve)
             self._dsp_overlay_curve.setData(t, arr)
         except Exception as e:
             print(f"DSP overlay error: {e}")
@@ -877,6 +882,7 @@ class MainWindow(QMainWindow):
             if not hasattr(self, "_wavedb_overlay_curve"):
                 self._wavedb_overlay_curve = self.tab_mm.plot_widget.plot(
                     pen=pg.mkPen(T.ACCENT_AMBER, width=1.5, style=Qt.DotLine))
+                self.tab_mm.register_external_overlay("wavedb", self._wavedb_overlay_curve)
             self._wavedb_overlay_curve.setData(t, arr)
         except Exception as e:
             log.warning(f"WaveDB overlay error: {e}")

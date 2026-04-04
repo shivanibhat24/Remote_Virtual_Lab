@@ -25,7 +25,7 @@ import pyqtgraph as pg
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QDoubleSpinBox, QSpinBox,
-    QGroupBox, QSplitter, QComboBox, QCheckBox, QMessageBox
+    QGroupBox, QSplitter, QComboBox, QCheckBox, QMessageBox,
 )
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QColor
@@ -33,6 +33,7 @@ from PyQt5.QtGui import QColor
 from themes  import T
 from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
 from widgets import ThemeLabel, ThemeCard, _HeaderStrip, make_header, LocalLoggerWidget
+from plot_trace_colors import TraceColorBar
 
 
 # -- State Detector -----------------------------------------------------------
@@ -79,8 +80,10 @@ class PowerProfileTab(QWidget):
     HISTORY = 1000
     sample_period = 0.010   # 100 Hz default (updated by main GUI)
 
-    def __init__(self):
+    def __init__(self, settings=None):
         super().__init__()
+        self._settings = settings
+        self._trace_bar: Optional[TraceColorBar] = None
         self._header_strip: Optional[_HeaderStrip] = None
         self._dso_source: Callable[[], list] = lambda: []
 
@@ -261,6 +264,27 @@ class PowerProfileTab(QWidget):
         self._energy_buf: list = []
         r_lay.addWidget(self._energy_plot)
 
+        pw = QHBoxLayout()
+        pl = QLabel("Trace colors")
+        pl.setStyleSheet(f"color: {T.TEXT_MUTED}; font-size: {SZ_SM}px; font-weight: 600;")
+        pw.addWidget(pl)
+        self._trace_bar = TraceColorBar(self._settings, "power", self)
+        self._trace_bar.add_trace(
+            "pinst", "P", "Instantaneous power", "PRIMARY",
+            items=[self._power_curve], width=2.0,
+        )
+        self._trace_bar.add_trace(
+            "pthr", "Thr", "Sleep/wake power threshold", "ACCENT_RED",
+            items=[self._thresh_line], width=1.0, style=Qt.DashLine,
+        )
+        self._trace_bar.add_trace(
+            "eint", "E", "Integrated energy", "ACCENT_AMBER",
+            items=[self._energy_curve], width=2.0,
+        )
+        pw.addWidget(self._trace_bar)
+        pw.addStretch()
+        r_lay.addLayout(pw)
+
         splitter.addWidget(right_w)
         splitter.setSizes([260, 900])
 
@@ -275,6 +299,8 @@ class PowerProfileTab(QWidget):
             p.setBackground(T.DARK_BG)
             p.getAxis("left").setTextPen(T.TEXT_MUTED)
             p.getAxis("bottom").setTextPen(T.TEXT_MUTED)
+        if self._trace_bar:
+            self._trace_bar.refresh_theme_defaults_only()
 
     # -- Public API ------------------------------------------------------------
 

@@ -13,11 +13,11 @@ import numpy as np
 import pyqtgraph as pg
 
 from PyQt5.QtWidgets import (
+    QLabel,
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
     QGridLayout,
-    QLabel,
     QPushButton,
     QLineEdit,
     QDoubleSpinBox,
@@ -35,6 +35,7 @@ from PyQt5.QtGui import QColor
 from themes import T
 from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
 from widgets import ThemeLabel, _HeaderStrip, make_header
+from plot_trace_colors import TraceColorBar
 
 
 def _synthesize_test(shape: str, freq_hz: float, amp: float, t: np.ndarray) -> np.ndarray:
@@ -151,8 +152,10 @@ class MathChannelsTab(QWidget):
 
     NUM_CHANNELS = 4
 
-    def __init__(self):
+    def __init__(self, settings=None):
         super().__init__()
+        self._settings = settings
+        self._ch1_trace_bar: Optional[TraceColorBar] = None
         self._header_strip: Optional[_HeaderStrip] = None
         self._dso_source: Callable[[], list] = lambda: []
         self._channels: List[MathChannel] = [MathChannel(i) for i in range(self.NUM_CHANNELS)]
@@ -293,6 +296,19 @@ class MathChannelsTab(QWidget):
         self._plot.addLegend(offset=(10, 10))
         r_lay.addWidget(self._plot, stretch=1)
 
+        mc = QHBoxLayout()
+        ml = QLabel("CH1 trace (math rows keep their own color buttons)")
+        ml.setStyleSheet(f"color: {T.TEXT_MUTED}; font-size: {SZ_SM}px; font-weight: 600;")
+        mc.addWidget(ml)
+        self._ch1_trace_bar = TraceColorBar(self._settings, "math", self)
+        self._ch1_trace_bar.add_trace(
+            "ch1", "CH1", "Raw DSO input on this plot", "ACCENT_BLUE",
+            items=[self._ch1_curve], width=1.5,
+        )
+        mc.addWidget(self._ch1_trace_bar)
+        mc.addStretch()
+        r_lay.addLayout(mc)
+
         self._err_lbl = QLabel("")
         self._err_lbl.setFont(_ui_font(SZ_SM))
         self._err_lbl.setStyleSheet(
@@ -425,6 +441,8 @@ class MathChannelsTab(QWidget):
         self._plot.setBackground(T.DARK_BG)
         self._plot.getAxis("left").setTextPen(T.TEXT_MUTED)
         self._plot.getAxis("bottom").setTextPen(T.TEXT_MUTED)
+        if self._ch1_trace_bar:
+            self._ch1_trace_bar.refresh_theme_defaults_only()
 
     def set_dso_source(self, fn: Callable[[], list]):
         self._dso_source = fn

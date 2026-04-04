@@ -31,6 +31,7 @@ from PyQt5.QtGui import QColor
 from themes  import T
 from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
 from widgets import ThemeLabel, ThemeCard, _HeaderStrip, make_header
+from plot_trace_colors import TraceColorBar
 
 try:
     from sklearn.ensemble import IsolationForest
@@ -89,8 +90,10 @@ class AnomalyDetectorTab(QWidget):
 
     MODEL_BACKEND = "IsolationForest" if HAS_SKLEARN else "3-sigma Gaussian"
 
-    def __init__(self):
+    def __init__(self, settings=None):
         super().__init__()
+        self._settings = settings
+        self._trace_bar: Optional[TraceColorBar] = None
         self._header_strip: Optional[_HeaderStrip] = None
         self._dso_source: Callable[[], list] = lambda: []
         self._model = None
@@ -239,6 +242,27 @@ class AnomalyDetectorTab(QWidget):
         self._score_plot.addItem(self._threshold_line)
         r_lay.addWidget(self._score_plot, stretch=1)
 
+        ac = QHBoxLayout()
+        al = QLabel("Trace colors")
+        al.setStyleSheet(f"color: {T.TEXT_MUTED}; font-size: {SZ_SM}px; font-weight: 600;")
+        ac.addWidget(al)
+        self._trace_bar = TraceColorBar(self._settings, "anomaly", self)
+        self._trace_bar.add_trace(
+            "wave", "Sig", "Input waveform", "ACCENT_BLUE",
+            items=[self._wave_curve], width=2.0,
+        )
+        self._trace_bar.add_trace(
+            "score", "Scr", "Anomaly score trace", "ACCENT_AMBER",
+            items=[self._score_curve], width=2.0,
+        )
+        self._trace_bar.add_trace(
+            "thr", "Thr", "Score threshold (drag on plot)", "ACCENT_RED",
+            items=[self._threshold_line], width=1.0, style=Qt.DashLine,
+        )
+        ac.addWidget(self._trace_bar)
+        ac.addStretch()
+        r_lay.addLayout(ac)
+
         splitter.addWidget(right_w)
         splitter.setSizes([240, 900])
 
@@ -253,6 +277,8 @@ class AnomalyDetectorTab(QWidget):
             p.setBackground(T.DARK_BG)
             p.getAxis("left").setTextPen(T.TEXT_MUTED)
             p.getAxis("bottom").setTextPen(T.TEXT_MUTED)
+        if self._trace_bar:
+            self._trace_bar.refresh_theme_defaults_only()
 
     # -- Public API ------------------------------------------------------------
 

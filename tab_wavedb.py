@@ -31,6 +31,7 @@ from PyQt5.QtGui import QColor
 from themes  import T
 from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
 from widgets import ThemeLabel, ThemeCard, _HeaderStrip, make_header
+from plot_trace_colors import TraceColorBar
 
 DB_PATH = Path.home() / ".stm32lab" / "wavedb.sqlite"
 
@@ -162,8 +163,10 @@ class WaveformDBTab(QWidget):
 
     overlay_requested = pyqtSignal(object)   # np.ndarray
 
-    def __init__(self):
+    def __init__(self, settings=None):
         super().__init__()
+        self._settings = settings
+        self._trace_bar: Optional[TraceColorBar] = None
         self._header_strip: Optional[_HeaderStrip] = None
         self._dso_source: Callable[[], list] = lambda: []
         self._current_id: Optional[int] = None
@@ -300,6 +303,19 @@ class WaveformDBTab(QWidget):
             pen=pg.mkPen(T.ACCENT_BLUE, width=2))
         r_lay.addWidget(self._preview_plot)
 
+        wc = QHBoxLayout()
+        wl = QLabel("Preview trace")
+        wl.setStyleSheet(f"color: {T.TEXT_MUTED}; font-size: {SZ_SM}px; font-weight: 600;")
+        wc.addWidget(wl)
+        self._trace_bar = TraceColorBar(self._settings, "wavedb", self)
+        self._trace_bar.add_trace(
+            "preview", "Prv", "Database waveform preview", "ACCENT_BLUE",
+            items=[self._preview_curve], width=2.0,
+        )
+        wc.addWidget(self._trace_bar)
+        wc.addStretch()
+        r_lay.addLayout(wc)
+
         # Notes field
         note_grp = QGroupBox("NOTES")
         nl = QVBoxLayout(note_grp)
@@ -322,6 +338,8 @@ class WaveformDBTab(QWidget):
         self._preview_plot.setBackground(T.DARK_BG)
         self._preview_plot.getAxis("left").setTextPen(T.TEXT_MUTED)
         self._preview_plot.getAxis("bottom").setTextPen(T.TEXT_MUTED)
+        if self._trace_bar:
+            self._trace_bar.refresh_theme_defaults_only()
 
     # -- Public API ------------------------------------------------------------
 

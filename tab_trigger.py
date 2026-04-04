@@ -17,7 +17,7 @@ import pyqtgraph as pg
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QComboBox, QDoubleSpinBox,
-    QSpinBox, QGroupBox, QSplitter, QCheckBox
+    QSpinBox, QGroupBox, QSplitter, QCheckBox,
 )
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor
@@ -25,6 +25,7 @@ from PyQt5.QtGui import QColor
 from themes  import T
 from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
 from widgets import ThemeLabel, ThemeCard, _HeaderStrip, make_header
+from plot_trace_colors import TraceColorBar
 
 
 class TriggerTab(QWidget):
@@ -36,8 +37,10 @@ class TriggerTab(QWidget):
     STATE_WAITING   = "WAITING"
     STATE_TRIGGERED = "TRIGGERED"
 
-    def __init__(self):
+    def __init__(self, settings=None):
         super().__init__()
+        self._settings = settings
+        self._trace_bar: Optional[TraceColorBar] = None
         self.sample_period    = 0.010  # default
         self.PRE_TRIG_COUNT   = 100
         self.POST_TRIG_COUNT  = 200
@@ -252,7 +255,36 @@ class TriggerTab(QWidget):
         self._curve_live = self._plot.plot(
             pen=pg.mkPen(T.TEXT_DIM, width=1))               # rolling live view
 
+        tc = QHBoxLayout()
+        tl = QLabel("Signal colors")
+        tl.setStyleSheet(f"color: {T.TEXT_MUTED}; font-size: {SZ_SM}px; font-weight: 600;")
+        tc.addWidget(tl)
+        self._trace_bar = TraceColorBar(self._settings, "trig", self)
+        self._trace_bar.add_trace(
+            "pre", "Pre", "Pre-trigger segment", "ACCENT_BLUE",
+            items=[self._curve_pre], width=1.5,
+        )
+        self._trace_bar.add_trace(
+            "post", "Post", "Post-trigger segment", "ACCENT_BLUE",
+            items=[self._curve_post], width=2.0,
+        )
+        self._trace_bar.add_trace(
+            "live", "Live", "Rolling live preview", "TEXT_DIM",
+            items=[self._curve_live], width=1.0,
+        )
+        self._trace_bar.add_trace(
+            "thr", "Thr", "Trigger threshold (horizontal)", "ACCENT_AMBER",
+            items=[self._trig_h_line], width=1.0, style=Qt.DashLine,
+        )
+        self._trace_bar.add_trace(
+            "t0", "T0", "Trigger instant (vertical)", "ACCENT_RED",
+            items=[self._trig_v_line], width=1.0, style=Qt.DashLine,
+        )
+        tc.addWidget(self._trace_bar)
+        tc.addStretch()
+
         p_lay.addWidget(self._plot, stretch=1)
+        p_lay.addLayout(tc)
         splitter.addWidget(plot_w)
         splitter.setSizes([240, 800])
 
@@ -279,6 +311,8 @@ class TriggerTab(QWidget):
         self._plot.setBackground(T.DARK_BG)
         self._plot.getAxis("left").setTextPen(T.TEXT_MUTED)
         self._plot.getAxis("bottom").setTextPen(T.TEXT_MUTED)
+        if self._trace_bar:
+            self._trace_bar.refresh_theme_defaults_only()
 
     # -- Arm / Disarm ----------------------------------------------------------
 

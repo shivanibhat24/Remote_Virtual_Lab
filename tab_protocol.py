@@ -26,6 +26,7 @@ from PyQt5.QtGui import QColor, QFont
 from themes  import T
 from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
 from widgets import ThemeLabel, ThemeCard, _HeaderStrip, make_header, LocalLoggerWidget
+from plot_trace_colors import TraceColorBar
 
 
 # 
@@ -261,13 +262,15 @@ PROTOCOL_NAMES = ("I2C", "SPI", "UART", "1-Wire")
 class ProtocolDecoderTab(QWidget):
     """Decode raw DSO captures into readable bus transactions."""
 
-    def __init__(self):
+    def __init__(self, settings=None):
         super().__init__()
         self._header_strip: Optional[_HeaderStrip] = None
         self._dso_source: Callable[[], list] = lambda: []
         self._annotations: List[pg.TextItem] = []
         self._uart_option_rows: List[QWidget] = []
         self._spi_mode_row: Optional[QWidget] = None
+        self._settings = settings
+        self._trace_bar: Optional[TraceColorBar] = None
         self._build_ui()
 
     @property
@@ -453,6 +456,27 @@ class ProtocolDecoderTab(QWidget):
         self._plot.addItem(self._thresh_line)
         r_lay.addWidget(self._plot, stretch=2)
 
+        pc = QHBoxLayout()
+        pcl = QLabel("Signal colors")
+        pcl.setStyleSheet(f"color: {T.TEXT_MUTED}; font-size: {SZ_SM}px; font-weight: 600;")
+        pc.addWidget(pcl)
+        self._trace_bar = TraceColorBar(self._settings, "proto", self)
+        self._trace_bar.add_trace(
+            "wave", "Sig", "Decoded analog trace", "ACCENT_BLUE", items=[self._curve], width=2.0
+        )
+        self._trace_bar.add_trace(
+            "thresh",
+            "Thr",
+            "Logic threshold line",
+            "ACCENT_AMBER",
+            items=[self._thresh_line],
+            width=1.0,
+            style=Qt.DashLine,
+        )
+        pc.addWidget(self._trace_bar)
+        pc.addStretch()
+        r_lay.addLayout(pc)
+
         # Transaction table
         tbl_grp = QGroupBox("DECODED TRANSACTIONS")
         tbl_lay = QVBoxLayout(tbl_grp)
@@ -480,6 +504,8 @@ class ProtocolDecoderTab(QWidget):
         self._plot.setBackground(T.DARK_BG)
         self._plot.getAxis("left").setTextPen(T.TEXT_MUTED)
         self._plot.getAxis("bottom").setTextPen(T.TEXT_MUTED)
+        if self._trace_bar:
+            self._trace_bar.refresh_theme_defaults_only()
 
     # -- Public API ------------------------------------------------------------
 

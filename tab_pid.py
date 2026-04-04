@@ -10,7 +10,7 @@ import pyqtgraph as pg
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QDoubleSpinBox, QGroupBox,
-    QProgressBar, QSplitter
+    QProgressBar, QSplitter,
 )
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor
@@ -19,6 +19,7 @@ from themes  import T
 from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
 from widgets import ThemeLabel, ThemeCard, _HeaderStrip, make_header
 from data_engine import CommandBuilder, ParsedMessage
+from plot_trace_colors import TraceColorBar
 
 
 class PidTunerTab(QWidget):
@@ -26,8 +27,10 @@ class PidTunerTab(QWidget):
 
     send_requested = pyqtSignal(str)
 
-    def __init__(self):
+    def __init__(self, settings=None):
         super().__init__()
+        self._settings = settings
+        self._trace_bar: Optional[TraceColorBar] = None
         self._header_strip: Optional[_HeaderStrip] = None
         self._stat_cards:   List[ThemeCard]        = []
         
@@ -174,8 +177,25 @@ class PidTunerTab(QWidget):
         
         self._curve_pv = self._plot.plot(pen=pg.mkPen(T.PRIMARY, width=2.5), name="Process Var")
         self._curve_sp = self._plot.plot(pen=pg.mkPen(T.TEXT_DIM, width=1.5, style=Qt.DashLine), name="Setpoint")
-        
+
         pl_lay.addWidget(self._plot, stretch=1)
+
+        pc = QHBoxLayout()
+        pl = QLabel("Trace colors")
+        pl.setStyleSheet(f"color: {T.TEXT_MUTED}; font-size: {SZ_SM}px; font-weight: 600;")
+        pc.addWidget(pl)
+        self._trace_bar = TraceColorBar(self._settings, "pid", self)
+        self._trace_bar.add_trace(
+            "pv", "PV", "Process variable", "PRIMARY",
+            items=[self._curve_pv], width=2.5,
+        )
+        self._trace_bar.add_trace(
+            "sp", "SP", "Setpoint", "TEXT_DIM",
+            items=[self._curve_sp], width=1.5, style=Qt.DashLine,
+        )
+        pc.addWidget(self._trace_bar)
+        pc.addStretch()
+        pl_lay.addLayout(pc)
         splitter.addWidget(plot_w)
         splitter.setSizes([260, 800])
 
@@ -198,6 +218,8 @@ class PidTunerTab(QWidget):
         self._plot.setBackground(T.DARK_BG)
         self._plot.getAxis("left").setTextPen(T.TEXT_MUTED)
         self._plot.getAxis("bottom").setTextPen(T.TEXT_MUTED)
+        if self._trace_bar:
+            self._trace_bar.refresh_theme_defaults_only()
 
     # -- Actions ---------------------------------------------------------------
 

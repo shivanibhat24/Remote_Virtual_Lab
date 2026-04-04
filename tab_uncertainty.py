@@ -28,6 +28,7 @@ from PyQt5.QtGui import QColor
 from themes  import T
 from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
 from widgets import ThemeLabel, ThemeCard, _HeaderStrip, make_header, LocalLoggerWidget
+from plot_trace_colors import TraceColorBar
 
 
 class UncertaintyTab(QWidget):
@@ -36,8 +37,10 @@ class UncertaintyTab(QWidget):
     ADC_BITS       = 12     # STM32 ADC resolution
     ADC_VREF       = 3.3    # reference voltage
 
-    def __init__(self):
+    def __init__(self, settings=None):
         super().__init__()
+        self._settings = settings
+        self._trace_bar: Optional[TraceColorBar] = None
         self._header_strip: Optional[_HeaderStrip] = None
         self._dso_source: Callable[[], list] = lambda: []
         self._stats_source: Callable[[], dict] = lambda: {}
@@ -224,6 +227,23 @@ class UncertaintyTab(QWidget):
         r_lay.addWidget(self._plot, stretch=1)
         r_lay.addWidget(self._plot2)
 
+        tw = QHBoxLayout()
+        tl = QLabel("Trace colors")
+        tl.setStyleSheet(f"color: {T.TEXT_MUTED}; font-size: {SZ_SM}px; font-weight: 600;")
+        tw.addWidget(tl)
+        self._trace_bar = TraceColorBar(self._settings, "uncertainty", self)
+        self._trace_bar.add_trace(
+            "wave", "V", "Waveform with bands (main trace)", "ACCENT_BLUE",
+            items=[self._curve_main], width=2.0,
+        )
+        self._trace_bar.add_trace(
+            "uhist", "U", "Rolling uncertainty history", "PRIMARY",
+            items=[self._uhist_curve], width=2.0,
+        )
+        tw.addWidget(self._trace_bar)
+        tw.addStretch()
+        r_lay.addLayout(tw)
+
         splitter.addWidget(right_w)
         splitter.setSizes([320, 900])
 
@@ -242,6 +262,8 @@ class UncertaintyTab(QWidget):
             f"color: {T.PRIMARY}; background: transparent; border: none;")
         self.lbl_uncertainty.setStyleSheet(
             f"color: {T.ACCENT_AMBER}; background: transparent; border: none;")
+        if self._trace_bar:
+            self._trace_bar.refresh_theme_defaults_only()
 
     # -- Public API ------------------------------------------------------------
 

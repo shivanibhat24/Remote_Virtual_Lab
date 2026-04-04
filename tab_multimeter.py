@@ -22,7 +22,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QComboBox, QDoubleSpinBox,
     QCheckBox, QSplitter, QMessageBox, QInputDialog,
-    QMenu, QAction, QGroupBox, QColorDialog
+    QMenu, QAction, QGroupBox
 )
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QPointF
 from PyQt5.QtGui import QFont, QColor
@@ -31,6 +31,7 @@ from themes  import T
 from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
 from widgets import ThemeLabel, ThemeCard, _HeaderStrip, make_header, LocalLoggerWidget
 from data_engine import CommandBuilder, AnalyticsEngine, ParsedMessage
+from plot_trace_colors import TraceColorBar
 
 
 class MultimeterTab(QWidget):
@@ -41,10 +42,18 @@ class MultimeterTab(QWidget):
     MODE_MAP      = {"Voltmeter": "V", "Ammeter": "A", "DSO": "D", "Ground": "G"}
     RANGE_MAP     = {"12 V": 12, "16 V": 16, "24 V": 24}
 
-    def __init__(self, analytics: AnalyticsEngine, screenshot_provider: Optional[Callable] = None):
+    def __init__(
+        self,
+        analytics: AnalyticsEngine,
+        screenshot_provider: Optional[Callable] = None,
+        settings=None,
+    ):
         super().__init__()
         self._analytics = analytics
         self._screenshot_provider = screenshot_provider
+        self._settings = settings
+        self._external_overlays: dict = {"dsp": None, "wavedb": None}
+        self._trace_bar = None
         self._dso_buf: deque = deque(maxlen=self.DSO_SAMPLES)
         self._last_mode = "V"
         self._last_unit = "V"
@@ -98,11 +107,6 @@ class MultimeterTab(QWidget):
         self.btn_screenshot.setToolTip("Save waveform as PNG (Selected folder)")
         self.btn_screenshot.clicked.connect(self._take_screenshot)
         hdr_lay.addWidget(self.btn_screenshot)
-
-        self.btn_color = QPushButton("TRACE COLOR")
-        self.btn_color.setFixedWidth(110)
-        self.btn_color.clicked.connect(self._on_choose_color)
-        hdr_lay.addWidget(self.btn_color)
 
         self.btn_svg = QPushButton("SVG")
         self.btn_svg.setFixedWidth(70)
@@ -274,6 +278,79 @@ class MultimeterTab(QWidget):
 
         dp.addWidget(self.plot_widget, stretch=1)
 
+        sig_row = QHBoxLayout()
+        sig_lbl = QLabel("Signal colors")
+        sig_lbl.setStyleSheet(f"color: {T.TEXT_MUTED}; font-size: {SZ_SM}px; font-weight: 600;")
+        sig_row.addWidget(sig_lbl)
+        self._trace_bar = TraceColorBar(self._settings, "mm", self)
+        self._trace_bar.add_trace(
+            "main",
+            "CH1",
+            "Main DSO / multimeter trace",
+            "ACCENT_BLUE",
+            items=[self._curve],
+            width=2.0,
+        )
+        self._trace_bar.add_trace(
+            "overlay",
+            "Cmp",
+            "Playback / compare overlay (dashed)",
+            "PRIMARY",
+            items=[self._overlay],
+            width=1.5,
+            style=Qt.DashLine,
+        )
+        self._trace_bar.add_trace(
+            "ov_dsp",
+            "DSP",
+            "DSP pipeline overlay on this plot",
+            "ACCENT_PUR",
+            items=[],
+            width=1.5,
+            style=Qt.DashLine,
+            extra_items=lambda: [self._external_overlays.get("dsp")],
+        )
+        self._trace_bar.add_trace(
+            "ov_wavedb",
+            "WDB",
+            "Waveform DB compare overlay",
+            "ACCENT_AMBER",
+            items=[],
+            width=1.5,
+            style=Qt.DotLine,
+            extra_items=lambda: [self._external_overlays.get("wavedb")],
+        )
+        self._trace_bar.add_trace(
+            "cursor1",
+            "C1",
+            "Vertical cursor 1",
+            "ACCENT_CYAN",
+            items=[self._cursor1],
+            width=1.0,
+            style=Qt.DashLine,
+        )
+        self._trace_bar.add_trace(
+            "cursor2",
+            "C2",
+            "Vertical cursor 2",
+            "ACCENT_PUR",
+            items=[self._cursor2],
+            width=1.0,
+            style=Qt.DashLine,
+        )
+        self._trace_bar.add_trace(
+            "trig",
+            "Trig",
+            "Trigger level line",
+            "ACCENT_AMBER",
+            items=[self._trig_line],
+            width=1.0,
+            style=Qt.DashLine,
+        )
+        sig_row.addWidget(self._trace_bar)
+        sig_row.addStretch()
+        dp.addLayout(sig_row)
+
         # Enable right-click context menu for annotations
         self.plot_widget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.plot_widget.customContextMenuRequested.connect(self._plot_context_menu)
@@ -303,12 +380,24 @@ class MultimeterTab(QWidget):
         for card in self._stat_cards:
             card.update_theme()
         self._refresh_val_colors()
+        self.lbl_value.setFont(_mono_font(SZ_BIG, bold=True))
+        self.lbl_unit.setFont(_ui_font(SZ_LG))
         self.plot_widget.setBackground(T.DARK_BG)
         self.plot_widget.getAxis("left").setTextPen(T.TEXT_MUTED)
         self.plot_widget.getAxis("bottom").setTextPen(T.TEXT_MUTED)
         # Refresh cursor readout labels
         for lbl in (self._lbl_c1, self._lbl_c2, self._lbl_dt, self._lbl_dv, self._lbl_freq):
             lbl.setStyleSheet(f"color: {T.ACCENT_CYAN}; background: transparent; border: none;")
+        if self._trace_bar:
+            self._trace_bar.refresh_theme_defaults_only()
+
+    def register_external_overlay(self, key: str, item) -> None:
+        """Register DSP or WaveDB overlay curve for color picker (MainWindow)."""
+        if key in self._external_overlays:
+            self._external_overlays[key] = item
+            tid = "ov_dsp" if key == "dsp" else "ov_wavedb"
+            if self._trace_bar:
+                self._trace_bar.reapply_trace(tid)
 
     # -- Timers ----------------------------------------------------------------
 
@@ -526,22 +615,6 @@ class MultimeterTab(QWidget):
 
     # -- Data Ingestion --------------------------------------------------------
 
-    def _on_choose_color(self):
-        """Allow user to pick the trace color."""
-        # Start with current curve color
-        initial = self._curve.opts.get('pen').color()
-        color   = QColorDialog.getColor(initial, self, "Select Signal Trace Color")
-        
-        if color.isValid():
-            # Update all plot elements
-            self._curve.setPen(pg.mkPen(color, width=2))
-            self._overlay.setPen(pg.mkPen(color, width=1.5, style=Qt.DashLine))
-            self._on_log_event(f"[UI] Trace color updated to {color.name()}", T.ACCENT_CYAN)
-
-    def _on_log_event(self, msg: str, color: str):
-        # Implementation in MultimeterTab
-        pass
-
     def on_data(self, msg: ParsedMessage):
         m = msg.fields.get("M", "")
         try:
@@ -583,7 +656,7 @@ class MultimeterTab(QWidget):
             self._overlay.setData([], [])
             return
         n = len(y_data)
-        t = (np.arange(n, dtype=float) - (n - 1)) * self.SAMPLE_PERIOD
+        t = (np.arange(n, dtype=float) - (n - 1)) * self.sample_period
         self._overlay.setData(t, np.asarray(y_data, dtype=float))
 
     # -- Plot Refresh ----------------------------------------------------------
@@ -603,29 +676,6 @@ class MultimeterTab(QWidget):
 
         if self.chk_cursors.isChecked():
             self._update_cursor_readout()
-
-    def update_theme(self):
-        """Called by MainWindow to refresh fonts/colors when theme changes."""
-        self.lbl_value.setFont(_mono_font(SZ_BIG, bold=True))
-        self.lbl_unit.setFont(_ui_font(SZ_LG))
-        self.lbl_unit.setStyleSheet(f"color: {T.TEXT_MUTED}; background: transparent;")
-        
-        # Refresh plot background if changed
-        self.plot_widget.setBackground(T.DARK_BG)
-        
-        # Refresh any ThemeLabels/Cards (though recursive updater handles this, 
-        # local update handles non-standard widgets)
-
-    def _on_choose_color(self):
-        """Allow user to pick the trace color."""
-        # Start with current curve color
-        initial = self._curve.opts.get('pen').color()
-        color   = QColorDialog.getColor(initial, self, "Select Signal Trace Color")
-        
-        if color.isValid():
-            # Update all plot elements
-            self._curve.setPen(pg.mkPen(color, width=2))
-            self._overlay.setPen(pg.mkPen(color, width=1.5, style=Qt.DashLine))
 
     def _refresh_stats(self):
         s = self._analytics.stats()

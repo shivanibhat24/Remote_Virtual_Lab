@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QDoubleSpinBox, QSpinBox,
     QComboBox, QGroupBox, QProgressBar, QSplitter,
-    QFileDialog, QMessageBox, QCheckBox
+    QFileDialog, QMessageBox, QCheckBox,
 )
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 
@@ -35,6 +35,7 @@ from themes  import T
 from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
 from widgets import ThemeLabel, ThemeCard, _HeaderStrip, make_header, LocalLoggerWidget
 from data_engine import CommandBuilder
+from plot_trace_colors import TraceColorBar
 
 
 class BodePlotTab(QWidget):
@@ -42,8 +43,10 @@ class BodePlotTab(QWidget):
 
     send_requested = pyqtSignal(str)
 
-    def __init__(self):
+    def __init__(self, settings=None):
         super().__init__()
+        self._settings = settings
+        self._trace_bar: Optional[TraceColorBar] = None
         self._header_strip: Optional[_HeaderStrip] = None
         self._stat_cards:   List[ThemeCard]        = []
         self.sample_period = 0.010 # default
@@ -212,6 +215,23 @@ class BodePlotTab(QWidget):
             symbol="o", symbolSize=5, symbolBrush=T.ACCENT_AMBER)
         pl_lay.addWidget(self._phase_plot, stretch=1)
 
+        bc = QHBoxLayout()
+        bl = QLabel("Trace colors")
+        bl.setStyleSheet(f"color: {T.TEXT_MUTED}; font-size: {SZ_SM}px; font-weight: 600;")
+        bc.addWidget(bl)
+        self._trace_bar = TraceColorBar(self._settings, "bode", self)
+        self._trace_bar.add_trace(
+            "gain", "dB", "Gain magnitude trace", "PRIMARY",
+            items=[self._gain_curve], width=2.0,
+        )
+        self._trace_bar.add_trace(
+            "phase", "Ph", "Phase trace", "ACCENT_AMBER",
+            items=[self._phase_curve], width=2.0,
+        )
+        bc.addWidget(self._trace_bar)
+        bc.addStretch()
+        pl_lay.addLayout(bc)
+
         splitter.addWidget(plots_w)
         splitter.setSizes([260, 800])
 
@@ -232,6 +252,8 @@ class BodePlotTab(QWidget):
             plot.setBackground(T.DARK_BG)
             plot.getAxis("left").setTextPen(T.TEXT_MUTED)
             plot.getAxis("bottom").setTextPen(T.TEXT_MUTED)
+        if self._trace_bar:
+            self._trace_bar.refresh_theme_defaults_only()
 
     # -- Sweep Engine ---------------------------------------------------------
 

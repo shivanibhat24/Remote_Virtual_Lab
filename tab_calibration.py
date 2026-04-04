@@ -33,6 +33,7 @@ from PyQt5.QtGui import QColor
 from themes  import T
 from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
 from widgets import ThemeLabel, ThemeCard, _HeaderStrip, make_header
+from plot_trace_colors import TraceColorBar
 
 CAL_PATH = Path.home() / ".stm32lab" / "calibration.json"
 
@@ -56,8 +57,10 @@ class CalibrationWizard(QWidget):
     """Multi-step polynomial calibration wizard."""
     calibration_updated = pyqtSignal(list)
 
-    def __init__(self):
+    def __init__(self, settings=None):
         super().__init__()
+        self._settings = settings
+        self._trace_bar: Optional[TraceColorBar] = None
         self._header_strip: Optional[_HeaderStrip] = None
         self._dso_source: Callable[[], list] = lambda: []
 
@@ -216,6 +219,27 @@ class CalibrationWizard(QWidget):
             symbol="o", symbolSize=8, symbolBrush=T.ACCENT_AMBER)
         r_lay.addWidget(self._res_plot, stretch=1)
 
+        cw = QHBoxLayout()
+        clb = QLabel("Trace colors")
+        clb.setStyleSheet(f"color: {T.TEXT_MUTED}; font-size: {SZ_SM}px; font-weight: 600;")
+        cw.addWidget(clb)
+        self._trace_bar = TraceColorBar(self._settings, "calibration", self)
+        self._trace_bar.add_trace(
+            "ideal", "1:1", "Ideal 1:1 line", "TEXT_DIM",
+            items=[self._ideal_curve], width=1.0, style=Qt.DashLine,
+        )
+        self._trace_bar.add_trace(
+            "fit", "Fit", "Fitted calibration curve", "PRIMARY",
+            items=[self._fit_curve], width=2.5,
+        )
+        self._trace_bar.add_trace(
+            "res", "Res", "Residuals (symbols)", "ACCENT_AMBER",
+            items=[self._res_curve], width=1.0, draw_line=False,
+        )
+        cw.addWidget(self._trace_bar)
+        cw.addStretch()
+        r_lay.addLayout(cw)
+
         # Coefficients display
         coeff_grp = QGroupBox("CORRECTION POLYNOMIAL")
         cl = QVBoxLayout(coeff_grp)
@@ -243,6 +267,8 @@ class CalibrationWizard(QWidget):
             p.setBackground(T.DARK_BG)
             p.getAxis("left").setTextPen(T.TEXT_MUTED)
             p.getAxis("bottom").setTextPen(T.TEXT_MUTED)
+        if self._trace_bar:
+            self._trace_bar.refresh_theme_defaults_only()
 
     # -- Public API ------------------------------------------------------------
 

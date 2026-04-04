@@ -10,7 +10,7 @@ import pyqtgraph as pg
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QSlider, QDoubleSpinBox, QGroupBox
+    QLabel, QPushButton, QSlider, QDoubleSpinBox, QGroupBox,
 )
 from PyQt5.QtCore import QTimer, pyqtSignal, Qt
 
@@ -18,13 +18,16 @@ from themes  import T
 from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
 from widgets import ThemeCard, _HeaderStrip, make_header, LocalLoggerWidget
 from data_engine import CommandBuilder, ParsedMessage
+from plot_trace_colors import TraceColorBar
 
 
 class VoltageRegTab(QWidget):
     send_requested = pyqtSignal(str)
 
-    def __init__(self):
+    def __init__(self, settings=None):
         super().__init__()
+        self._settings = settings
+        self._trace_bar: Optional[TraceColorBar] = None
         self._boost_history: deque = deque(maxlen=200)
         self._temp_history:  deque = deque(maxlen=200)
         self._stat_cards: List[ThemeCard] = []
@@ -130,6 +133,24 @@ class VoltageRegTab(QWidget):
             pen=pg.mkPen(T.ACCENT_RED,   width=2), name="Temp degC")
         self.trend_plot.addLegend(offset=(10, 5))
         fl.addWidget(self.trend_plot)
+
+        vc = QHBoxLayout()
+        vl = QLabel("Trace colors")
+        vl.setStyleSheet(f"color: {T.TEXT_MUTED}; font-size: {SZ_SM}px; font-weight: 600;")
+        vc.addWidget(vl)
+        self._trace_bar = TraceColorBar(self._settings, "vreg", self)
+        self._trace_bar.add_trace(
+            "boost", "Bst", "Boost voltage trace", "ACCENT_AMBER",
+            items=[self._boost_curve], width=2.0,
+        )
+        self._trace_bar.add_trace(
+            "temp", "Tmp", "Temperature trace", "ACCENT_RED",
+            items=[self._temp_curve], width=2.0,
+        )
+        vc.addWidget(self._trace_bar)
+        vc.addStretch()
+        fl.addLayout(vc)
+
         c_lay.addStretch()
 
         self._refresh_setpoint_color()
@@ -150,6 +171,8 @@ class VoltageRegTab(QWidget):
         self._refresh_setpoint_color()
         self.trend_plot.setBackground(T.DARK_BG)
         self.trend_plot.getAxis("left").setTextPen(T.TEXT_MUTED)
+        if self._trace_bar:
+            self._trace_bar.refresh_theme_defaults_only()
 
     def _on_send(self):
         self.send_requested.emit(CommandBuilder.vreg_cmd(self.spin_vreg.value()))

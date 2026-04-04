@@ -49,6 +49,9 @@ class SettingsManager:
     def set(self, key: str, value: Any) -> None:
         self._data[key] = value
 
+    def remove(self, key: str) -> None:
+        self._data.pop(key, None)
+
     def get_geometry(self) -> dict:
         return self._data.get("window_geometry", {})
 

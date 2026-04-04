@@ -10,7 +10,7 @@ import pyqtgraph as pg
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QPushButton, QComboBox, QSpinBox, QSlider, QGroupBox,
-    QTabWidget
+    QTabWidget, QLabel,
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 
@@ -18,6 +18,7 @@ from themes  import T
 from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
 from widgets import _HeaderStrip, make_header
 from data_engine import CommandBuilder
+from plot_trace_colors import TraceColorBar
 
 
 class FunctionGenTab(QWidget):
@@ -47,10 +48,12 @@ class FunctionGenTab(QWidget):
         "Ground":    "TEXT_MUTED",
     }
 
-    def __init__(self):
+    def __init__(self, settings=None):
         super().__init__()
         self._current_wave = "Square"
         self._header_strip: Optional[_HeaderStrip] = None
+        self._settings = settings
+        self._trace_bar: Optional[TraceColorBar] = None
         self._build_ui()
 
     def _build_ui(self):
@@ -127,6 +130,23 @@ class FunctionGenTab(QWidget):
             pen=pg.mkPen(T.ACCENT_BLUE, width=2.5))
         c_lay.addWidget(self._wave_preview)
 
+        pv_colors = QHBoxLayout()
+        pv_lbl = QLabel("Preview trace")
+        pv_lbl.setStyleSheet(f"color: {T.TEXT_MUTED}; font-size: {SZ_SM}px; font-weight: 600;")
+        pv_colors.addWidget(pv_lbl)
+        self._trace_bar = TraceColorBar(self._settings, "fg", self)
+        self._trace_bar.add_trace(
+            "preview",
+            "FG",
+            "Function generator preview waveform",
+            "ACCENT_BLUE",
+            items=[self._preview_curve],
+            width=2.5,
+        )
+        pv_colors.addWidget(self._trace_bar)
+        pv_colors.addStretch()
+        c_lay.addLayout(pv_colors)
+
         # -- Frequency control -------------------------------------------------
         freq_grp = QGroupBox("FREQUENCY")
         fg_lay   = QVBoxLayout(freq_grp)
@@ -196,6 +216,8 @@ class FunctionGenTab(QWidget):
         for name, btn in self._wave_btns.items():
             col = getattr(T, self._WAVE_COLOR_ATTRS[name], T.PRIMARY)
             btn.setStyleSheet(self._wave_btn_style(col))
+        if self._trace_bar:
+            self._trace_bar.refresh_theme_defaults_only()
         self._update_preview()
 
     def _select_wave(self, name: str):
@@ -238,7 +260,11 @@ class FunctionGenTab(QWidget):
             y = np.ones_like(t) * 0.5
         else:
             y = np.zeros_like(t)
-        col = getattr(T, self._WAVE_COLOR_ATTRS.get(name, "PRIMARY"), T.PRIMARY)
+        key = "color_fg_preview"
+        if self._settings and self._settings.get(key):
+            col = self._settings.get(key)
+        else:
+            col = getattr(T, self._WAVE_COLOR_ATTRS.get(name, "PRIMARY"), T.PRIMARY)
         self._preview_curve.setPen(pg.mkPen(col, width=2.5))
         self._preview_curve.setData(t, y)
 
