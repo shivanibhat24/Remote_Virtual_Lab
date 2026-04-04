@@ -159,10 +159,17 @@ class FunctionGenTab(QWidget):
         self.btn_send.clicked.connect(self._on_send)
         ctrl_row.addWidget(self.btn_send, stretch=2)
 
-        self.btn_pulse = QPushButton("SINGLE PULSE")
+        self.cmb_pulse_type = QComboBox()
+        self.cmb_pulse_type.addItems(["HALF-CYCLE", "FULL-CYCLE"])
+        self.cmb_pulse_type.setFixedHeight(42)
+        self.cmb_pulse_type.setFixedWidth(110)
+        self.cmb_pulse_type.setToolTip("Pulse precision: Trigger 0.5 or 1.0 logic cycles")
+        ctrl_row.addWidget(self.cmb_pulse_type)
+
+        self.btn_pulse = QPushButton("PULSE")
         self.btn_pulse.setObjectName("btn_warning")
         self.btn_pulse.setFixedHeight(42)
-        self.btn_pulse.setToolTip("Trigger a single waveform cycle (One-shot)")
+        self.btn_pulse.setToolTip("Trigger a single waveform one-shot pulse")
         self.btn_pulse.clicked.connect(self._on_pulse)
         ctrl_row.addWidget(self.btn_pulse, stretch=1)
 
@@ -240,5 +247,7 @@ class FunctionGenTab(QWidget):
         self.send_requested.emit(CommandBuilder.wave_freq(self.spin_freq.value()))
 
     def _on_pulse(self):
-        """Trigger a single pulse command."""
-        self.send_requested.emit("#FG_PULSE:1")
+        """Trigger a single pulse command (Half or Full cycle)."""
+        mode = "H" if self.cmb_pulse_type.currentText() == "HALF-CYCLE" else "F"
+        # Command syntax: #FG_PULSE:[H/F]
+        self.send_requested.emit(f"#FG_PULSE:{mode}")
