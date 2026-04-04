@@ -1,78 +1,72 @@
-# 📑 STM32 Lab GUI Technical Manual (v6.0 Platinum)
+# STM32 Laboratory Instrumentation Suite: Technical Manual (v6.0 Platinum)
 
-## 🏛️ System Architecture
-
-STM32 Lab GUI is a modular, event-driven PyQt5 application. It relies on a central `MainWindow` that manages a stack of specialized laboratory components.
-
-### 1. The Dynamic UI Engine
-- **Sidebar Navigation**: Uses a custom `QListWidget` with `Qt.UserRole` mapping to a `QStackedWidget`.
-- **Dynamic Typography**: Implements a recursive visitation engine in `MainWindow`. When a theme changes, the engine traverses all children and executes `update_theme()` to force a font refresh across all headers, cards, and labels.
-- **Color/Theme Core**: Themes are defined in `themes.py` using a global `T` object (e.g., `T.PRIMARY`, `T.CARD_BG`).
-
-### 2. Instrumentation Modules
-
-- **DSO (Digital Storage Oscilloscope)**: 
-    - 500-sample buffer with 20+ FPS update rate.
-    - Integrated vertical cursors for delta-time and delta-voltage measurements.
-    - User-customizable Trace Colors (Native QColorDialog).
-- **Function Generator (15+ Waveforms)**:
-    - High-fidelity signal generation including `Sine`, `Step`, `Staircase`, `Gaussian`, and `Sinc`.
-    - Supports single Pulse triggering (Half-Cycle or Full-Cycle).
-- **PID Tuner**: 
-    - Real-time closed-loop control of a Boost Converter target.
-    - Online analysis for settling time and overshoot metrics.
-
-### 3. Smart Integration
-
-- **NLP Command Center**: 
-    - A local grammar engine (`NLGrammar`) translates plain English into hardware commands (#CMD:K=V;).
-    - Sync Engine: Commands issued via NLP automatically synchronize the UI state across relevant tabs.
-- **Waveform Database**:
-    - Stores Every capture with a 16-character SHA-256 hash.
-    - Searchable SQLite backend for high-speed waveform comparison.
+**A Comprehensive Architectural and Operational Reference for Advanced Embedded Verification and Laboratory Instrumentation.**
 
 ---
 
-## 📡 Communication Protocol (TX/RX)
+## 1. System Architecture and Design
 
-The GUI communicates via standard Serial (UART) or over a Cloud MQTT bridge. All packets follow the **#KEY:VALUE;** format.
+The STM32 Laboratory Instrumentation Suite is a modular, event-driven application developed using the PyQt5 framework. The primary objective is to provide a unified dashboard for managing multiple laboratory instruments with a distraction-free, professional-grade interface.
 
-### Common Commands (TX)
-- `#VREG:V=3.3;` - Set output voltage to 3.3V
-- `#WAVE:T=SQ;` - Set waveform to Square
-- `#WAVE:F=1000;` - Set frequency to 1000Hz
-- `#FG_PULSE:H` - Trigger a single half-cycle pulse
+### The Dynamic UI Synchronization Engine
+- **Sidebar Navigation Control**: Implements a custom `QListWidget` with `Qt.UserRole` mapping for efficient `QStackedWidget` navigation.
+- **Recursive Typography Refresh (V6.0)**: A recursive visitation algorithm traverses the UI tree upon theme changes. It executes the `update_theme()` method on all children to ensure font synchronization across all headers, cards, and digital displays.
+- **Theme Architecture**: Themes are centralized in `themes.py` using a standardized `T` object (e.g., `T.PRIMARY`, `T.CARD_BG`, `T.ACCENT_BLUE`).
 
-### Telemetry Packets (RX)
-- `#DATA:X=1.23;` - Single sample data (Multimeter/DSO)
+---
+
+## 2. Laboratory Modules: Functional Overviews
+
+### Oscilloscope and Multimeter (DSO)
+- **High-Frequency Sampling**: 500-sample buffer with 20+ FPS update rate.
+- **Measurement Interface**: Includes dual vertical cursors for Delta Time and Delta Voltage delta readout.
+- **Trace Color Selection**: Native `QColorDialog` integration for signal personalization.
+
+### Function Generator (15+ Waveforms)
+- **Advanced Signal Processing**: Generates recursive and mathematical waveforms (Sine, Step, Gaussian, Sinc, etc.).
+- **Triggered Capture**: Supports one-shot triggers for Pulse waveforms (Half-Cycle or Full-Cycle).
+
+### PID Tuner (Boost Converter)
+- **Closed-Loop Verification Interface**: Real-time closed-loop control of a Boost Converter target hardware.
+- **Analytical Metrics**: Integrated online analysis for settling time and overshoot percentage.
+
+---
+
+## 3. Communication Protocols and Interfacing
+
+The suite utilizes a standardized packet-based communication protocol designed for Serial and MQTT interfaces.
+
+### Command Structure (Transmission)
+All commands follow the `#KEY:VALUE;` format:
+- `#VREG:V=3.3;` - Output voltage set to 3.3V
+- `#WAVE:F=1000;` - Frequency set to 1,000 Hertz
+- `#FG_PULSE:H` - Trigger single half-cycle pulse
+
+### Telemetry Structure (Reception)
+- `#DATA:X=1.23;` - Signal sampling telemetry
 - `#BOOST:V=5.02;` - Feedback from the PID Boost Converter
-- `#TEMP:T=45.2;` - Core temperature telemetry
-- `#ACK:M=OK;` - Hardware acknowledgement
+- `#TEMP:T=45.2;` - Thermal telemetry
+- `#ACK:M=OK;` - Hardware acknowledgment signal
 
 ---
 
-## ☁️ MQTT Cloud Protocol
+## 4. Intelligent Automation and Integration
 
-- **NAT Traversal**: Enables remote lab access through the Mosquito global broker.
-- **Topic Path**: `stm32lab/{session_id}/[tx/rx]`
-- **Session Management**: Randomly generated IDs with a visitation verification prompt in `CloudTab`.
+### NLP Command Parsing
+- **Local Grammar Engine**: A specialized `NLGrammar` class performs rule-based parsing of natural language text into hexadecimal hardware commands.
+- **UI Synchronization**: Commands issued through the NLP terminal are intercepted to automatically update the local UI states of all relevant laboratory instruments.
 
----
-
-## 🎨 Developing New Themes
-
-To create a new theme, add a entry to `themes.py` following this schema:
-```python
-ThemeName = {
-   "PRIMARY": "#HEX",
-   "CARD_BG": "#HEX",
-   "DARK_BG": "#HEX",
-   "ACCENT_BLUE": "#HEX",
-   "TEXT": "#HEX",
-   "BORDER": "#HEX"
-}
-```
+### Waveform Database Persistence
+- **SQLite Integration**: Captures are hashed using a 16-character SHA-256 algorithm and stored in a local SQLite database for historical search and similarity comparison.
 
 ---
 
-*This document is a living manual. For the latest updates, please consult the codebase source or the repository maintainer.*
+## 5. MQTT Cloud and NAT Traversal
+
+- **Broker Infrastructure**: Uses the Mosquitto global broker for remote NAT-to-NAT communication.
+- **Client Protocol**: `stm32lab/{session_id}/[tx/rx]`
+- **Session Security**: Dynamic session ID generation on startup with a visitation prompt for user verification.
+
+---
+
+*This technical manual is maintained for the STM32 Lab GUI v6.0 Platinum codebase. For technical support, please refer to the source documentation in the primary repository.*
