@@ -18,7 +18,7 @@ from PyQt5.QtGui import QColor
 from themes  import T
 from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
 from widgets import ThemeLabel, ThemeCard, _HeaderStrip, make_header
-from data_engine import CommandBuilder
+from data_engine import CommandBuilder, ParsedMessage
 
 
 class PidTunerTab(QWidget):
@@ -183,6 +183,12 @@ class PidTunerTab(QWidget):
 
     def set_data_source(self, fn: Callable[[], tuple]):
         self._data_source = fn
+
+    def on_data(self, msg: ParsedMessage):
+        """Entry point for #BOOST telemetry from MainWindow."""
+        # The actual plot updates via the _timer calling _data_source(),
+        # so this is a hook for future realtime analysis or logging.
+        pass
 
     def update_theme(self):
         if self._header_strip:

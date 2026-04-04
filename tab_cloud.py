@@ -23,6 +23,7 @@ class CloudTab(QWidget):
         super().__init__()
         self._bridge = bridge
         self._header_strip: Optional[_HeaderStrip] = None
+        self._has_visited = False
         self._build_ui()
         self._bridge.status_changed.connect(self._on_status)
         self._bridge.log_event.connect(self._on_log_event)
@@ -137,15 +138,40 @@ class CloudTab(QWidget):
         self.btn_stop.setEnabled(False)
         self.lbl_status.setText("Status: OFFLINE")
 
+    def prompt_session_id(self):
+        """Called by MainWindow on visit."""
+        if self._has_visited:
+            return
+        self._has_visited = True
+        
+        msg = (f"A new random Session ID has been generated: <b>{self._bridge.session_id}</b><br><br>"
+               "Do you want to continue with this session ID for your remote dashboard?")
+        
+        res = QMessageBox.question(self, "MQTT Session", msg, 
+                                   QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+        
+        if res == QMessageBox.No:
+            # Let them change it
+            new_id, ok = QInputDialog.getText(self, "Change Session ID", 
+                                              "Enter new Session ID (alphanumeric):",
+                                              text=self._bridge.session_id)
+            if ok and new_id.strip():
+                self._bridge.set_session_id(new_id.strip())
+                self.txt_session.setText(new_id.strip())
+                self._on_log_event(f"[SYSTEM] Session ID changed to: {new_id.strip()}", T.ACCENT_CYAN)
+        else:
+            self._on_log_event(f"[SYSTEM] Continuing with random ID: {self._bridge.session_id}", T.ACCENT_CYAN)
+
     def _on_status(self, msg: str):
         self.lbl_status.setText(msg)
         self.lbl_status.setStyleSheet(f"color: {T.PRIMARY}; font-size: {SZ_BODY}px; font-weight: bold;")
 
-    def _on_log_event(self, msg: str):
+    def _on_log_event(self, msg: str, color: Optional[str] = None):
         ts    = datetime.datetime.now().strftime("%H:%M:%S")
-        color = T.TEXT_MUTED if "disconnected" in msg else T.ACCENT_CYAN
-        if "Command" in msg:
-            color = T.ACCENT_AMBER
+        if color is None:
+            color = T.TEXT_MUTED if "disconnected" in msg else T.ACCENT_CYAN
+            if "Command" in msg:
+                color = T.ACCENT_AMBER
         self.activity_log.append(
             f'<span style="color:{T.TEXT_MUTED}">[{ts}]</span> '
             f'<span style="color:{color}">{msg}</span>'

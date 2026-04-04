@@ -22,14 +22,19 @@ class MqttBridge(QObject):
     command_received = pyqtSignal(str)
     log_event = pyqtSignal(str)
 
-    def __init__(self):
+    def __init__(self, session_id: Optional[str] = None):
         super().__init__()
-        self.session_id = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        self.session_id = session_id or "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
         self.broker = "test.mosquitto.org"
-        self.port = 1883
+        self.port   = 1883
         self.base_topic = f"stm32lab/{self.session_id}"
         self.client: Optional[mqtt_client.Client] = None
         self._running = False
+
+    def set_session_id(self, new_id: str):
+        """Update session ID and base topic."""
+        self.session_id = new_id
+        self.base_topic = f"stm32lab/{self.session_id}"
 
     def connect_cloud(self):
         if not HAS_MQTT:

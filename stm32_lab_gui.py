@@ -604,6 +604,12 @@ class MainWindow(QMainWindow):
     def _on_sidebar_changed(self, row: int):
         item = self.sidebar.item(row)
         if item is None: return
+        
+        # Check for Cloud Tab visit prompt
+        if row == 16:  # tab_cloud is usually index 16
+            if hasattr(self.tab_cloud, "prompt_session_id"):
+                self.tab_cloud.prompt_session_id()
+                
         idx = item.data(Qt.UserRole)
         if idx is not None:
              self.stacked.setCurrentIndex(idx)
@@ -671,6 +677,7 @@ class MainWindow(QMainWindow):
         self.tab_conn.refresh_requested.connect(self._refresh_ports)
 
         # NL command interface
+        self.tab_nlcmd.send_requested.connect(self._on_nlp_command_sent)
         self.tab_nlcmd.connect_requested.connect(
             lambda: self._on_connect(self.tab_conn.cmb_port.currentText()))
         self.tab_nlcmd.disconnect_requested.connect(self._on_disconnect)
@@ -825,6 +832,34 @@ class MainWindow(QMainWindow):
         self.tab_conn.log(f"[ERR] Serial: {msg}", T.ACCENT_RED)
         self._on_disconnect()
 
+    def _on_nlp_command_sent(self, cmd: str):
+        """Intersects commands from NLP tab to update local UI states."""
+        # 1. Send to hardware
+        self._on_send(cmd)
+        
+        # 2. Update local UI if possible
+        try:
+            # Example: #VREG:V=3.3;
+            if cmd.startswith("#VREG:V="):
+                val = float(cmd.split("=")[1].replace(";", ""))
+                self.tab_voltreg.spin_vreg.setValue(val)
+                
+            # Example: #WAVE:F=500;
+            elif cmd.startswith("#WAVE:F="):
+                val = float(cmd.split("=")[1].replace(";", ""))
+                self.tab_fg.spin_freq.setValue(int(val))
+                
+            # Example: #WAVE:T=SQ;
+            elif cmd.startswith("#WAVE:T="):
+                type_code = cmd.split("=")[1].replace(";", "")
+                # Find the name from WAVE_MAP
+                for name, code in self.tab_fg.WAVE_MAP.items():
+                    if code == type_code:
+                        self.tab_fg._select_wave(name)
+                        break
+        except Exception as e:
+            print(f"NLP UI Sync failed: {e}")
+
     def _on_dsp_overlay(self, arr):
         """DSP pipeline result: overlay on DSO plot."""
         try:
@@ -837,7 +872,7 @@ class MainWindow(QMainWindow):
                     pen=pg.mkPen(T.ACCENT_PUR, width=1.5, style=Qt.DashLine))
             self._dsp_overlay_curve.setData(t, arr)
         except Exception as e:
-            log.warning(f"DSP overlay error: {e}")
+            print(f"DSP overlay error: {e}")
 
     def _on_wavedb_overlay(self, arr):
         """Waveform DB comparison overlay on DSO plot."""
