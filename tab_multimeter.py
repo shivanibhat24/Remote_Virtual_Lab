@@ -22,7 +22,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QComboBox, QDoubleSpinBox,
     QCheckBox, QSplitter, QMessageBox, QInputDialog,
-    QMenu, QAction, QGroupBox
+    QMenu, QAction, QGroupBox, QColorDialog
 )
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QPointF
 from PyQt5.QtGui import QFont, QColor
@@ -98,6 +98,11 @@ class MultimeterTab(QWidget):
         self.btn_screenshot.setToolTip("Save waveform as PNG (Selected folder)")
         self.btn_screenshot.clicked.connect(self._take_screenshot)
         hdr_lay.addWidget(self.btn_screenshot)
+
+        self.btn_color = QPushButton("TRACE COLOR")
+        self.btn_color.setFixedWidth(110)
+        self.btn_color.clicked.connect(self._on_choose_color)
+        hdr_lay.addWidget(self.btn_color)
 
         self.btn_svg = QPushButton("SVG")
         self.btn_svg.setFixedWidth(70)
@@ -521,6 +526,22 @@ class MultimeterTab(QWidget):
 
     # -- Data Ingestion --------------------------------------------------------
 
+    def _on_choose_color(self):
+        """Allow user to pick the trace color."""
+        # Start with current curve color
+        initial = self._curve.opts.get('pen').color()
+        color   = QColorDialog.getColor(initial, self, "Select Signal Trace Color")
+        
+        if color.isValid():
+            # Update all plot elements
+            self._curve.setPen(pg.mkPen(color, width=2))
+            self._overlay.setPen(pg.mkPen(color, width=1.5, style=Qt.DashLine))
+            self._on_log_event(f"[UI] Trace color updated to {color.name()}", T.ACCENT_CYAN)
+
+    def _on_log_event(self, msg: str, color: str):
+        # Implementation in MultimeterTab
+        pass
+
     def on_data(self, msg: ParsedMessage):
         m = msg.fields.get("M", "")
         try:
@@ -594,6 +615,17 @@ class MultimeterTab(QWidget):
         
         # Refresh any ThemeLabels/Cards (though recursive updater handles this, 
         # local update handles non-standard widgets)
+
+    def _on_choose_color(self):
+        """Allow user to pick the trace color."""
+        # Start with current curve color
+        initial = self._curve.opts.get('pen').color()
+        color   = QColorDialog.getColor(initial, self, "Select Signal Trace Color")
+        
+        if color.isValid():
+            # Update all plot elements
+            self._curve.setPen(pg.mkPen(color, width=2))
+            self._overlay.setPen(pg.mkPen(color, width=1.5, style=Qt.DashLine))
 
     def _refresh_stats(self):
         s = self._analytics.stats()

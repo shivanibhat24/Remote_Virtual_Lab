@@ -1,91 +1,81 @@
-# STM32 Remote Electronics Lab - v6.0 Gold (Enhanced)
+# 🔬 STM32 Lab GUI v6.0 Platinum
 
-Welcome to the **STM32 Remote Electronics Lab**, a comprehensive, offline, pure-Python measurement and automation suite designed for the STM32 Bluepill. This application transforms a simple microcontroller and an FTDI serial interface into a sophisticated desktop laboratory ecosystem.
+[![Version](https://img.shields.io/badge/Version-6.0_Platinum-gold.svg)](https://github.com/shivanibhat24/Remote_Virtual_Lab)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Python: 3.8+](https://img.shields.io/badge/Python-3.8%2B-green.svg)](https://www.python.org/)
 
-**Version:** 6.0 Gold  
-**Language:** Python 3.10+  
-**Official Repository:** [Remote_Virtual_Lab](https://github.com/shivanibhat24/Remote_Virtual_Lab)  
-**Dependencies:** `PyQt5`, `pyqtgraph`, `numpy`, `pyserial`, `websockets` (Extras: `scipy`, `scikit-learn`, `pandas`)
+**The ultimate professional-grade laboratory ecosystem for STM32 and embedded verification.** 
 
----
-
-## What's New in v6.0 Gold?
-
-### 🎨 Premium Visual Experience
-- **10 Consolidated Themes**: A curated selection of high-fidelity palettes including *Everforest*, *Rose Pine*, *Synthwave '84*, *Cyberpunk*, and *GitHub Dimmed*.
-- **Dynamic Formal Typography**: Features a recursive font synchronization engine. Switching themes instantly swaps your typography between **Serif** (e.g., Academic/Notebook) and **Sans-Serif** (e.g., Modern/Cyberpunk) across all sidebars and digital displays.
-
-### 🧪 Professional-Grade Function Generator
-The Function Generator has been expanded into a **15+ Waveform Laboratory Module** with a new dual-tab interface:
-- **PRIMARY Tab**: Rapid access to `Square`, `Triangle`, and `Parabola`.
-- **OTHER (Advanced) Tab**: A specialized tray for `Sine`, `Half-Wave`, `Full-Wave`, `Sinc`, `Step`, `Sawtooth`, `Staircase`, `Gaussian`, `DC`, and `White Noise`.
-- **Single Pulse Trigger**: A dedicated **[ SINGLE PULSE ]** hardware trigger for one-shot transient testing.
-
-### 📸 Intelligent Data Capture
-- **Session-Based Screenshots**: Select your capture directory once per session. The application remembers your choice, automatically saving all subsequent PNGs, SVGs, and DSO plots to your preferred location until the app is closed.
+STM32 Lab GUI v6.0 is a modular, high-performance instrumentation suite designed for electronics education, hardware verification, and remote laboratory experiments. Built with a signature **Platinum UI** and a recursive **Dynamic Typography Engine**, it provides a stunning, distraction-free environment for deep engineering work.
 
 ---
 
-## Core Features
+## 🌟 Key Highlights
 
-The laboratory application utilizes a modern **Sidebar Dashboard Interface**, organizing all modules logically into four primary categories.
+### 🎨 Premium Design System
+Experience the project in **10 handcrafted themes**, from the deep-space `Obsidian` to the vibrant `Nord` and `Solarized`. Features a recursive sync engine that refreshes real-time typography across all 100+ sidebar elements simultaneously.
 
-### Tier 1 Core Instruments
-1. **Multimeter & Oscilloscope:** A rolling 500-sample DSO plotting raw ADCs. Includes **Dual Delta T/Delta V Cursors**, click-to-annotate markings, and vector graphic (SVG) export.
-2. **Advanced Function Generator:** 15+ signal types with real-time mathematical preview.
-3. **Voltage Regulator & Boost:** Closed-loop software control with 1st-order software PID modeling.
-4. **Bode Plotter:** Automatic frequency sweeps tracking filter roll-offs (dB).
-5. **Triggered Capture:** Synchronized single-shot captures with adjustable level/edge thresholds.
-6. **DSP Pipeline:** Real-time SciPy filtering (Butterworth, Chebyshev, FIR) overlaid on live traces.
-7. **Protocol Decoder:** Logic analysis for SPI, I2C, UART, and 1-Wire.
-8. **CSV/SQLite Playback:** Scrub through historical logs and re-process datasets.
+### 🧠 AI & Natural Language
+- **NLP Command Center**: Control your lab using plain English. *"Set frequency to 1kHz"*, *"Show me a triangle wave"*, or *"What is the RMS voltage?"*.
+- **Anomaly Detection**: Integrated DSP and statistical monitoring for signal integrity analysis.
 
-### Tier 2 Analysis & Automation
-9. **Math / Differential Channels:** Live Python/NumPy expressions for complex signal paths.
-10. **Power Profile Analyser:** Dynamic power estimation (V^2/R) and energy accumulation (mWh).
-11. **Uncertainty Quantification:** Statistical margins (+/- sigma) and LaTeX-ready strings.
-12. **Python REPL Console:** Direct programmatic control of the lab backend.
-13. **Natural Language Commands:** Speak or type plain English commands to the hardware.
-
-### Tier 3 Management & Documentation
-14. **Waveform Database:** SQLite-backed signature categorization and trace overlay.
-15. **AI Anomaly Detector:** `IsolationForest` monitoring for drift or mechanical faults.
-16. **Calibration Wizard:** Polynomial curve-fitting for hardware accuracy correction.
-17. **Experiment Journal:** Rich-text editor with time-series tags and HTML/Markdown export.
-18. **Production Test Mode:** Automated pass/fail validation against JSON specifications.
-
-### Logging & Infrastructure
-19. **LXI / SCPI TCP Server:** Enterprise-standard port 5025 server for LabVIEW/MATLAB bridging.
-20. **Headless Jupyter API**: Automated testing via the `stm32lab` Python module.
-21. **Hot-Reloadable Plugins**: Drop-in UI panels for unlimited custom expansion.
-22. **Global MQTT Cloud Relay**: Native remote access bypassing NATs for global collaboration.
+### 🛰️ Global Cloud Relay
+Built-in **MQTT NAT Traversal**. Share your lab setup globally with a session-based random ID. Access your dashboard from any browser or mobile device (MQTT Dash, etc.).
 
 ---
 
-## Setup & Installation
+## 🛠️ Performance Modules
 
-1. Create a Python Virtual Environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate    # Linux/Mac
-   # OR: .\venv\Scripts\activate # Windows
-   ```
-2. Install the necessary dependencies:
-   ```bash
-   pip install PyQt5 pyqtgraph pyserial websockets numpy
-   pip install scipy scikit-learn pandas  # Optional for advanced analytical modules
-   ```
-3. Run the GUI:
-   ```bash
-   python stm32_lab_gui.py
-   ```
+| Category | Instruments & Features |
+| :--- | :--- |
+| **Primary** | Multimeter, DSO (Oscilloscope), Function Generator, Logic Analyzer |
+| **Advanced** | PID Tuner (Boost), DSP Pipeline, Protocol Decoder |
+| **Analytics** | Waveform Browser, CSV Playback, SQL Search, Frequency Domain (FFT) |
+| **Automation** | Python REPL, Production Tester, AI Command Center |
 
-To interact programmatically via IPython/Jupyter without opening the GUI:
-```python
-from stm32lab import STM32Lab
-lab = STM32Lab(port="COM3")
-df = lab.sweep_bode(f_start=10, f_stop=100_000)
-print(df.head())
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- **Python 3.8+**
+- **STM32 Hardware** (Running the Lab Firmware)
+- **High-speed Serial Connection**
+
+### Installation
+```bash
+# Clone the repository
+git clone https://github.com/shivanibhat24/Remote_Virtual_Lab.git
+cd Remote_Virtual_Lab
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-© 2026 shivanibhat24. Licensed for educational and research use.
+### Usage
+```bash
+python stm32_lab_gui.py
+```
+
+---
+
+## 🧬 Core Technologies
+- **GUI Engine**: PyQt5 with custom `ThemeCore`
+- **Plotting**: High-performance `PyQtGraph` (20+ FPS)
+- **Math & DSP**: `NumPy`, `SciPy`
+- **Cloud**: `Paho-MQTT`
+- **Database**: `SQLite3` (Waveform history)
+
+---
+
+## 📜 Documentation
+For a deep dive into the architecture and command protocol, please refer to:
+- [**Technical Manual (DOCUMENTATION.md)**](file:///C:/Users/sg78b/Downloads/Python%20GUI%20Code/codev2/DOCUMENTATION.md)
+- [**Waveform Library Reference**](file:///C:/Users/sg78b/Downloads/Python%20GUI%20Code/codev2/tab_funcgen.py)
+
+---
+
+> [!TIP]
+> Use the **[ TRACE COLOR ]** button in the DSO tab to personalize your signal visualization for publications or presentations.
+
+**Developed with ❤️ for the Global Electronics Engineering Community.**
