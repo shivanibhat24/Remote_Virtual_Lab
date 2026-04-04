@@ -37,6 +37,8 @@ Use **Tools → Settings** for theme and global sample period.
 
 The **NL Command** tab turns plain English into serial commands and **updates the matching tabs** (e.g. Function Generator frequency and waveform, Voltage Reg setpoint).
 
+A **light fuzzy intent layer** (`nlp_intent.py`) scores your wording against example phrases; **`pip install rapidfuzz`** improves tolerance of rephrasing (a `difflib` fallback works without it). Numeric slots (Hz, V, wave type) are always parsed from **your** text.
+
 Examples:
 
 | You type | Effect |
@@ -48,6 +50,10 @@ Examples:
 | `what is the dominant frequency?` | Reads live analytics (does not reprogram FG) |
 
 Frequencies accept **Hz**, **kHz** / **K**, and **MHz**. If your firmware cannot run at very high rates, clamp limits in firmware or in `data_engine.CommandBuilder.wave_freq`.
+
+## Math channels
+
+Under **Math Channels**, each virtual trace can mix the live DSO buffer (**CH1**) with a **synthesized test signal** (sine, square, triangle, sawtooth): set frequency and amplitude, choose **add / sub / mul**, and leave the expression empty to get **CH1 ±× TEST**, or write a custom expression using **`TEST`**.
 
 ## Documentation
 

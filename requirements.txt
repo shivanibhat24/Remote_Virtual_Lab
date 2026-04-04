@@ -3,6 +3,7 @@ PyQt5>=5.15.0
 pyserial>=3.5
 pyqtgraph>=0.13.0
 numpy>=1.22.0
+rapidfuzz>=3.0.0
 
 # Optional (DSP tab filters, analytics)
 scipy>=1.9.0

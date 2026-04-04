@@ -22,12 +22,13 @@ Inbound examples: `#DATA:X=...`, `#ACK:...`, `#ERR:...`, `#BOOST:...`, `#TEMP:..
 
 ## Natural language command (NL) pipeline
 
-**Module:** `tab_nlcmd.py` — class `NLGrammar`.
+**Modules:** `tab_nlcmd.py` (`NLGrammar`), `nlp_intent.py` (light fuzzy matcher).
 
 1. User text is classified (measurement question vs. command).  
-2. **Measurement** queries (e.g. dominant frequency, voltage stats) use `AnalyticsEngine.stats()` only — they do not change the function generator.  
-3. **Wave + frequency** commands parse shape and numeric frequency (Hz / kHz / MHz) and emit `#WAVE:T=...;` then `#WAVE:F=...;`.  
-4. `MainWindow._on_nlp_command_sent` sends each line to the device **and** parses it again with `DataParser` to update:
+2. **Fuzzy intent** (optional but recommended): `rapidfuzz` compares normalized input to exemplar phrases; on a strong match, the same slot parsers extract voltage / frequency / wave type from the **user’s** words. If `rapidfuzz` is not installed, a `difflib` fallback is used (less tolerant of rephrasing).  
+3. **Measurement** queries (e.g. dominant frequency, voltage stats) use `AnalyticsEngine.stats()` only — they do not change the function generator.  
+4. **Wave + frequency** commands parse shape and numeric frequency (Hz / kHz / MHz) and emit `#WAVE:T=...;` then `#WAVE:F=...;`.  
+5. `MainWindow._on_nlp_command_sent` sends each line to the device **and** parses it again with `DataParser` to update:
    - **Function Generator** tab — `_select_wave()` and `spin_freq`  
    - **Voltage Reg** tab — `spin_vreg` for `#VREG:...`  
 
@@ -36,6 +37,10 @@ Inbound examples: `#DATA:X=...`, `#ACK:...`, `#ERR:...`, `#BOOST:...`, `#TEMP:..
 ## Function generator UI range
 
 `tab_funcgen.py` exposes **0–1,000,000 Hz** in the spin box and slider so high-frequency NLP commands (e.g. 400 kHz) display correctly. Confirm your STM32 waveform timer supports the requested frequency.
+
+## Math channels and synthesized TEST
+
+`tab_mathchan.py` evaluates expressions on **CH1** (live buffer) and **t** (seconds). Each row can **mix a synthesized test waveform** (sine, square, triangle, sawtooth) with **Add / Sub / Mul** against CH1. The array **`TEST`** is injected per channel; if the expression is left empty while mix + shape are enabled, the default is `CH1 + TEST`, `CH1 - TEST`, or `CH1 * TEST`.
 
 ## DSP and protocol tabs
 

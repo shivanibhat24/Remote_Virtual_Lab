@@ -16,6 +16,8 @@ Examples:
 import re
 from typing import Callable, List, Optional, Tuple
 
+from nlp_intent import fuzzy_best_intent
+
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton,
@@ -217,12 +219,48 @@ class NLGrammar:
         if _wants_wave_with_freq(text):
             return self._emit_wave(_parse_wave(text) or "SQ", _parse_freq(text) or 100.0)
 
+        fz = fuzzy_best_intent(text)
+        if fz:
+            got = self._try_fuzzy_dispatch(fz, text)
+            if got is not None:
+                return got
+
         for pattern, handler in self._rules:
             m = pattern.search(text)
             if m:
                 return handler(text, m)
 
         return ("I didn't understand that. Type 'help' for examples.", [])
+
+    def _try_fuzzy_dispatch(
+        self, intent: str, text: str
+    ) -> Optional[Tuple[str, List[str]]]:
+        """Map fuzzy intent to command if slots parse from user text; else None."""
+        if intent == "help":
+            return self._cmd_help(text, None)
+        if intent == "connect":
+            return self._cmd_connect(text, None)
+        if intent == "disconnect":
+            return self._cmd_disconnect(text, None)
+        if intent == "vreg":
+            if _parse_voltage(text) is None:
+                return None
+            return self._cmd_vreg(text, None)
+        if intent == "wave_freq":
+            wf = _parse_wave(text)
+            ff = _parse_freq(text)
+            if wf is None or ff is None:
+                return None
+            return self._emit_wave(wf, ff)
+        if intent == "freq_only":
+            if _parse_freq(text) is None:
+                return None
+            return self._cmd_freq_regex(text, None)
+        if intent == "wave_type":
+            if _parse_wave(text) is None:
+                return None
+            return self._cmd_wave_type(text, None)
+        return None
 
     def _emit_wave(self, wave_code: str, freq_hz: float) -> Tuple[str, List[str]]:
         freq_i = int(round(max(0.0, freq_hz)))
@@ -234,7 +272,7 @@ class NLGrammar:
         pretty = f"{freq_i:,} Hz" if freq_i < 1_000_000 else f"{freq_i / 1e6:.3g} MHz"
         return (f"Setting {wave_name} wave at {pretty}", cmds)
 
-    def _cmd_vreg(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
+    def _cmd_vreg(self, text: str, m: Optional[re.Match]) -> Tuple[str, List[str]]:
         v = _parse_voltage(text)
         if v is None:
             return ("Could not parse voltage value.", [])
@@ -243,20 +281,20 @@ class NLGrammar:
         self._send_fn(cmd)
         return (f"Setting output voltage to {v:.1f} V", [cmd])
 
-    def _cmd_wave_full_regex(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
+    def _cmd_wave_full_regex(self, text: str, m: Optional[re.Match]) -> Tuple[str, List[str]]:
         wave_code = _parse_wave(text) or "SQ"
         freq = _parse_freq(text)
         if freq is None:
             return ("Could not parse frequency.", [])
         return self._emit_wave(wave_code, freq)
 
-    def _cmd_wave_full_regex_rev(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
+    def _cmd_wave_full_regex_rev(self, text: str, m: Optional[re.Match]) -> Tuple[str, List[str]]:
         return self._cmd_wave_full_regex(text, m)
 
-    def _cmd_wave_full_phrase(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
+    def _cmd_wave_full_phrase(self, text: str, m: Optional[re.Match]) -> Tuple[str, List[str]]:
         return self._cmd_wave_full_regex(text, m)
 
-    def _cmd_freq_regex(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
+    def _cmd_freq_regex(self, text: str, m: Optional[re.Match]) -> Tuple[str, List[str]]:
         freq = _parse_freq(text)
         if freq is None:
             return ("Could not parse frequency.", [])
@@ -265,7 +303,7 @@ class NLGrammar:
         self._send_fn(cmd)
         return (f"Setting frequency to {freq_i:,} Hz", [cmd])
 
-    def _cmd_wave_type(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
+    def _cmd_wave_type(self, text: str, m: Optional[re.Match]) -> Tuple[str, List[str]]:
         if re.match(r"^\s*(what|which|how|why)\b", text, re.I):
             return (
                 "For scope readings ask: 'what is the dominant frequency?'. "
@@ -294,20 +332,20 @@ class NLGrammar:
         vrms = s.get("vrms", 0)
         return (f"Mean: {mean:.3f} V    VRMS: {vrms:.3f} V", [])
 
-    def _cmd_connect(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
+    def _cmd_connect(self, text: str, m: Optional[re.Match]) -> Tuple[str, List[str]]:
         self._connect_fn()
         return ("Attempting to connect...", [])
 
-    def _cmd_disconnect(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
+    def _cmd_disconnect(self, text: str, m: Optional[re.Match]) -> Tuple[str, List[str]]:
         self._disconnect_fn()
         return ("Disconnecting...", [])
 
-    def _cmd_help(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
+    def _cmd_help(self, text: str, m: Optional[re.Match]) -> Tuple[str, List[str]]:
         msg = (
             "Examples:\n"
             "  'set output to 3.3V'\n"
             "  'square wave at 400 kHz'  /  '400kHz square wave'\n"
-            "  'set the sine wave to 1 MHz'\n"
+            "  Paraphrases work too: 'hook up the board', 'give me a sine 50 hz'\n"
             "  'set frequency to 2500 Hz'\n"
             "  'triangle wave'\n"
             "  'what is the dominant frequency?'\n"
@@ -400,7 +438,13 @@ class NLCommandTab(QWidget):
         il.addWidget(btn_send)
         c_lay.addWidget(in_grp)
 
+        try:
+            import rapidfuzz  # noqa: F401
+            _nlp_note = "Fuzzy NL (rapidfuzz) enabled for paraphrases."
+        except ImportError:
+            _nlp_note = "Install rapidfuzz for better paraphrase matching: pip install rapidfuzz"
         self._log_append("Lab AI ready. Type a command below or click a Quick Command.", T.ACCENT_CYAN)
+        self._log_append(_nlp_note, T.TEXT_MUTED)
 
     def update_theme(self):
         if self._header_strip:
