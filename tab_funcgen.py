@@ -8,8 +8,9 @@ import numpy as np
 import pyqtgraph as pg
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QComboBox, QSpinBox, QSlider, QGroupBox
+    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
+    QPushButton, QComboBox, QSpinBox, QSlider, QGroupBox,
+    QTabWidget
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 
@@ -23,16 +24,27 @@ class FunctionGenTab(QWidget):
     send_requested = pyqtSignal(str)
 
     WAVE_MAP = {
-        "Square": "SQ", "Triangle": "TR", "Sawtooth": "SAW", 
-        "Parabola": "PA", "Noise": "NOS", "Ground": "G"
+        "Square": "SQ", "Triangle": "TR", "Parabola": "PA",
+        "Sine": "SI", "Half-Wave": "HW", "Full-Wave": "FW",
+        "Sawtooth": "SA", "Sinc": "SN", "Step": "ST",
+        "Staircase": "SC", "Gaussian": "GA", "Noise": "NO",
+        "DC": "DC", "Ground": "G"
     }
     _WAVE_COLOR_ATTRS = {
-        "Square":   "ACCENT_BLUE",
-        "Triangle": "PRIMARY",
-        "Sawtooth": "ACCENT_CYAN",
-        "Parabola": "ACCENT_AMBER",
-        "Noise":    "ACCENT_RED",
-        "Ground":   "TEXT_MUTED",
+        "Square":    "ACCENT_BLUE",
+        "Triangle":  "PRIMARY",
+        "Parabola":  "ACCENT_AMBER",
+        "Sine":      "ACCENT_CYAN",
+        "Half-Wave": "ACCENT_RED",
+        "Full-Wave": "ACCENT_PUR",
+        "Sawtooth":  "ACCENT_BLUE",
+        "Sinc":      "ACCENT_CYAN",
+        "Step":      "PRIMARY",
+        "Staircase": "ACCENT_AMBER",
+        "Gaussian":  "ACCENT_PUR",
+        "Noise":     "ACCENT_RED",
+        "DC":        "TEXT_MUTED",
+        "Ground":    "TEXT_MUTED",
     }
 
     def __init__(self):
@@ -56,25 +68,52 @@ class FunctionGenTab(QWidget):
         c_lay.setSpacing(16)
         root.addWidget(content, stretch=1)
 
-        # -- Waveform selector -------------------------------------------------
-        wave_grp = QGroupBox("WAVEFORM TYPE")
-        wg_lay   = QVBoxLayout(wave_grp)
-        wg_lay.setSpacing(10)
-        wg_lay.setContentsMargins(14, 22, 14, 14)
-        c_lay.addWidget(wave_grp)
+        # -- Waveform selector (Tabbed) ----------------------------------------
+        self._tabs = QTabWidget()
+        c_lay.addWidget(self._tabs)
+        
+        # 1. PRIMARY TAB
+        page_primary = QWidget()
+        lay_primary = QHBoxLayout(page_primary)
+        lay_primary.setContentsMargins(10, 10, 10, 10)
+        lay_primary.setSpacing(10)
+        self._tabs.addTab(page_primary, "PRIMARY")
+        
+        # 2. OTHER TAB (Advanced Set)
+        page_other = QWidget()
+        lay_other = QGridLayout(page_other) # Grid for many buttons
+        lay_other.setContentsMargins(10, 10, 10, 10)
+        lay_other.setSpacing(8)
+        self._tabs.addTab(page_other, "OTHER")
 
-        btn_row = QHBoxLayout()
-        wg_lay.addLayout(btn_row)
         self._wave_btns: dict = {}
-        for name in self.WAVE_MAP:
+        primary_list = ["Square", "Triangle", "Parabola"]
+        other_list   = [w for w in self.WAVE_MAP if w not in primary_list]
+
+        for name in primary_list:
             btn = QPushButton(name.upper())
             btn.setCheckable(True)
-            btn.setFixedHeight(42)
+            btn.setFixedHeight(50)
             col = getattr(T, self._WAVE_COLOR_ATTRS[name], T.PRIMARY)
             btn.setStyleSheet(self._wave_btn_style(col))
             btn.clicked.connect(lambda _, n=name: self._select_wave(n))
-            btn_row.addWidget(btn)
+            lay_primary.addWidget(btn)
             self._wave_btns[name] = btn
+
+        row, col_idx = 0, 0
+        for name in other_list:
+            btn = QPushButton(name.upper())
+            btn.setCheckable(True)
+            btn.setFixedHeight(34)
+            color_val = getattr(T, self._WAVE_COLOR_ATTRS[name], T.PRIMARY)
+            btn.setStyleSheet(self._wave_btn_style(color_val, sz=SZ_XS))
+            btn.clicked.connect(lambda _, n=name: self._select_wave(n))
+            lay_other.addWidget(btn, row, col_idx)
+            self._wave_btns[name] = btn
+            col_idx += 1
+            if col_idx > 3:
+                col_idx = 0
+                row += 1
 
         pg.setConfigOption("background", T.CARD_BG)
         pg.setConfigOption("foreground", T.TEXT_MUTED)
@@ -86,7 +125,7 @@ class FunctionGenTab(QWidget):
         self._wave_preview.setMouseEnabled(x=False, y=False)
         self._preview_curve = self._wave_preview.plot(
             pen=pg.mkPen(T.ACCENT_BLUE, width=2.5))
-        wg_lay.addWidget(self._wave_preview)
+        c_lay.addWidget(self._wave_preview)
 
         # -- Frequency control -------------------------------------------------
         freq_grp = QGroupBox("FREQUENCY")
@@ -133,11 +172,11 @@ class FunctionGenTab(QWidget):
     # -- Helpers ---------------------------------------------------------------
 
     @staticmethod
-    def _wave_btn_style(col: str) -> str:
+    def _wave_btn_style(col: str, sz: int = SZ_SM) -> str:
         return f"""
             QPushButton {{
                 color:{col}; border:1px solid {col}; background:transparent;
-                font-size:{SZ_SM}px; font-weight:700; font-family:{T.FONT_UI};
+                font-size:{sz}px; font-weight:700; font-family:{T.FONT_UI};
             }}
             QPushButton:checked {{ background:{col}; color:{T.DARK_BG}; }}
             QPushButton:hover   {{ background:{col}33; }}
@@ -163,6 +202,7 @@ class FunctionGenTab(QWidget):
         freq  = self.spin_freq.value() or 1
         t     = np.linspace(0, 2 / freq, 500)
         phase = 2 * np.pi * freq * t
+        
         if name == "Square":
             y = np.sign(np.sin(phase))
         elif name == "Triangle":
@@ -171,8 +211,24 @@ class FunctionGenTab(QWidget):
             y = 2 * (t * freq - np.floor(0.5 + t * freq))
         elif name == "Parabola":
             y = np.sin(phase) ** 2 * np.sign(np.sin(phase))
+        elif name == "Sine":
+            y = np.sin(phase)
+        elif name == "Half-Wave":
+            y = np.maximum(0, np.sin(phase))
+        elif name == "Full-Wave":
+            y = np.abs(np.sin(phase))
+        elif name == "Sinc":
+            y = np.sinc(freq * t * 4 - 4)
+        elif name == "Step":
+            y = np.where(t > 1/(2*freq), 1.0, 0.0)
+        elif name == "Staircase":
+            y = np.floor(t * freq * 5) / 5
+        elif name == "Gaussian":
+            y = np.exp(-((t*freq - 1)**2) / 0.1)
         elif name == "Noise":
             y = np.random.normal(0, 0.4, size=len(t))
+        elif name == "DC":
+            y = np.ones_like(t) * 0.5
         else:
             y = np.zeros_like(t)
         col = getattr(T, self._WAVE_COLOR_ATTRS.get(name, "PRIMARY"), T.PRIMARY)
