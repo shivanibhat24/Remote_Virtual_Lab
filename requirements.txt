@@ -1,0 +1,11 @@
+# STM32 Remote Electronics Lab — Python dependencies
+PyQt5>=5.15.0
+pyserial>=3.5
+pyqtgraph>=0.13.0
+numpy>=1.22.0
+
+# Optional (DSP tab filters, analytics)
+scipy>=1.9.0
+
+# Optional (cloud / WebSocket bridge)
+websockets>=11.0

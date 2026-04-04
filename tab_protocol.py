@@ -8,10 +8,8 @@ I2C / SPI / UART / 1-Wire transactions with:
   * Pure-Python bit-bang state machines - no extra library required
 """
 
-import datetime
-import math
-from collections import deque
-from typing import Callable, List, Optional, Dict, Any
+import csv
+from typing import Callable, List, Optional, Dict, Any, Tuple
 
 import numpy as np
 import pyqtgraph as pg
@@ -20,7 +18,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QComboBox, QDoubleSpinBox,
     QSpinBox, QGroupBox, QSplitter, QTableWidget,
-    QTableWidgetItem, QCheckBox, QMessageBox
+    QTableWidgetItem, QCheckBox, QMessageBox, QFileDialog,
 )
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QFont
@@ -39,150 +37,221 @@ def _to_digital(samples: np.ndarray, threshold: float) -> np.ndarray:
     return (samples >= threshold).astype(np.uint8)
 
 
-def _find_edges(digital: np.ndarray) -> List[tuple]:
+def _find_edges(digital: np.ndarray) -> List[Tuple[int, str]]:
     """Return list of (index, 'rising'|'falling') for each edge."""
     edges = []
     for i in range(1, len(digital)):
-        if digital[i-1] == 0 and digital[i] == 1:
+        if digital[i - 1] == 0 and digital[i] == 1:
             edges.append((i, "rising"))
-        elif digital[i-1] == 1 and digital[i] == 0:
+        elif digital[i - 1] == 1 and digital[i] == 0:
             edges.append((i, "falling"))
     return edges
 
 
-def decode_uart(samples: np.ndarray, threshold: float,
-                baud_rate: int, sample_rate: float) -> List[Dict]:
-    """Simple UART decoder  detects start bit and samples 8 data bits."""
-    digital  = _to_digital(samples, threshold)
-    sps      = sample_rate / baud_rate   # samples per symbol
-    results  = []
-    i        = 0
-    n        = len(digital)
-
-    while i < n - int(sps * 10):
-        # look for falling edge (start bit)
-        if digital[i] == 1 and digital[i+1] == 0:
-            start = i + 1
-            # sample 8 data bits at centres
-            bits = []
-            for b in range(8):
-                centre = int(start + (b + 1.5) * sps)
-                if centre < n:
-                    bits.append(int(digital[centre]))
-            byte_val = sum(bit << idx for idx, bit in enumerate(bits))
-            t_ms = start / sample_rate * 1000
-            results.append({
-                "proto":  "UART",
-                "time_ms": f"{t_ms:.2f}",
-                "info":    f"0x{byte_val:02X}  '{chr(byte_val) if 32<=byte_val<127 else '.'}'",
-                "ack":     "-",
-                "crc":     "-",
-            })
-            i = int(start + sps * 10)
-        else:
-            i += 1
-    return results
-
-
-def decode_i2c(samples: np.ndarray, threshold: float,
-               sample_rate: float) -> List[Dict]:
-    """
-    Simple I2C decoder.
-    Treats the single DSO channel as SDA; detects START/STOP + address byte.
-    (Full clock-channel decode would need a 2-ch DSO  this is single-channel approx.)
-    """
+def decode_uart(
+    samples: np.ndarray,
+    threshold: float,
+    baud_rate: int,
+    sample_rate: float,
+    data_bits: int = 8,
+    stop_bits: int = 1,
+    parity: str = "None",
+) -> List[Dict]:
+    """UART: start bit + data + optional parity + stop; advances by full frame width."""
     digital = _to_digital(samples, threshold)
-    edges   = _find_edges(digital)
-    results = []
-
-    # Look for a highlow (START) transition when we've had a long stable high
+    if baud_rate <= 0 or sample_rate <= 0:
+        return []
+    sps = sample_rate / float(baud_rate)
+    n = len(digital)
+    results: List[Dict] = []
     i = 0
-    while i < len(edges) - 9:
-        idx, kind = edges[i]
-        if kind == "falling":
-            # Collect next 9 edges for address + ACK
-            chunk = edges[i:i+18]
-            bits  = []
-            for j in range(0, min(16, len(chunk)), 2):
-                hi_idx = chunk[j][0]
-                if hi_idx < len(digital):
-                    bits.append(int(digital[hi_idx]))
-            if len(bits) >= 8:
-                addr_byte = sum(b << (7 - k) for k, b in enumerate(bits[:8]))
-                rw   = "READ " if (addr_byte & 1) else "WRITE"
-                addr = addr_byte >> 1
-                ack  = "ACK" if (len(bits) > 8 and bits[8] == 0) else "NAK"
-                t_ms = idx / sample_rate * 1000
-                results.append({
-                    "proto":   "I2C",
-                    "time_ms": f"{t_ms:.2f}",
-                    "info":    f"{rw} 0x{addr:02X}",
-                    "ack":     ack,
-                    "crc":     "-",
-                })
-            i += 9
+    data_bits = max(5, min(9, int(data_bits)))
+    stop_bits = max(1, min(2, int(stop_bits)))
+    parity_on = parity in ("Even", "Odd")
+
+    min_frame = int(sps * (1 + data_bits + (1 if parity_on else 0) + stop_bits) + 1)
+
+    while i < n - min_frame:
+        if digital[i] == 1 and i + 1 < n and digital[i + 1] == 0:
+            start = i + 1
+            bits: List[int] = []
+            ok = True
+            for b in range(data_bits):
+                centre = int(round(start + (b + 1.5) * sps))
+                if centre >= n:
+                    ok = False
+                    break
+                bits.append(int(digital[centre]))
+            if not ok or len(bits) != data_bits:
+                i += 1
+                continue
+
+            pbit = None
+            if parity_on:
+                pc = int(round(start + (data_bits + 1.5) * sps))
+                if pc >= n:
+                    i += 1
+                    continue
+                pbit = int(digital[pc])
+                ones = sum(bits)
+                if parity == "Even" and (ones + pbit) % 2 != 0:
+                    crc = "PARITY ERR"
+                elif parity == "Odd" and (ones + pbit) % 2 != 1:
+                    crc = "PARITY ERR"
+                else:
+                    crc = "OK"
+            else:
+                crc = "-"
+
+            byte_val = sum(bit << k for k, bit in enumerate(bits))
+            if data_bits == 7:
+                byte_val &= 0x7F
+            t_ms = start / sample_rate * 1000
+            ch = chr(byte_val) if 32 <= byte_val < 127 else "."
+            results.append({
+                "proto": "UART",
+                "time_ms": f"{t_ms:.2f}",
+                "info": f"0x{byte_val:02X}  '{ch}'",
+                "ack": "-",
+                "crc": crc,
+            })
+            i = int(round(start + (1 + data_bits + (1 if parity_on else 0) + stop_bits) * sps))
         else:
             i += 1
     return results
 
 
-def decode_spi(samples: np.ndarray, threshold: float,
-               sample_rate: float) -> List[Dict]:
-    """SPI decoder  single channel MOSI approximation."""
+def decode_i2c(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """
+    Single-channel SDA approximation: after a long idle HIGH, a falling edge is START;
+    the following address+ACK window is split into 9 slices (8 data + ACK).
+    True I2C needs SCL on a second channel for reliable decoding.
+    """
     digital = _to_digital(samples, threshold)
-    edges   = _find_edges(digital)
-    results = []
-    i       = 0
-    while i + 8 < len(edges):
-        bits = []
-        base = edges[i][0]
-        for j in range(8):
-            if i + j < len(edges):
-                bits.append(1 if edges[i+j][1] == "rising" else 0)
-        byte_val = sum(b << (7-k) for k, b in enumerate(bits))
-        t_ms = base / sample_rate * 1000
+    edges = _find_edges(digital)
+    results: List[Dict] = []
+    n = len(digital)
+    min_idle = max(8, int(0.00005 * sample_rate)) if sample_rate > 0 else 8
+
+    ei = 0
+    while ei < len(edges):
+        idx, kind = edges[ei]
+        if kind != "falling":
+            ei += 1
+            continue
+        run_high = 0
+        j = idx - 1
+        while j >= 0 and digital[j] == 1:
+            run_high += 1
+            j -= 1
+        if run_high < min_idle:
+            ei += 1
+            continue
+        if ei + 16 >= len(edges):
+            break
+        end_idx = edges[ei + 16][0]
+        start_idx = idx
+        width = end_idx - start_idx
+        if width < 4:
+            ei += 1
+            continue
+        bits: List[int] = []
+        for k in range(9):
+            a = start_idx + (k * width) // 9
+            b = start_idx + ((k + 1) * width) // 9
+            b = min(b, n)
+            a = min(a, n - 1)
+            if b <= a:
+                bits.append(0)
+            else:
+                bits.append(1 if float(np.mean(digital[a:b])) >= 0.5 else 0)
+        addr_byte = sum(b << (7 - k) for k, b in enumerate(bits[:8]))
+        rw = "READ" if (addr_byte & 1) else "WRITE"
+        addr = addr_byte >> 1
+        ack_bit = bits[8] if len(bits) > 8 else 1
+        ack = "ACK" if ack_bit == 0 else "NAK"
+        t_ms = idx / sample_rate * 1000
         results.append({
-            "proto":   "SPI",
+            "proto": "I2C",
             "time_ms": f"{t_ms:.2f}",
-            "info":    f"MOSI 0x{byte_val:02X}",
-            "ack":     "-",
-            "crc":     "-",
+            "info": f"{rw} 0x{addr:02X}",
+            "ack": ack,
+            "crc": "-",
         })
-        i += 8
+        ei += 9
     return results
 
 
-def decode_onewire(samples: np.ndarray, threshold: float,
-                   sample_rate: float) -> List[Dict]:
-    """1-Wire reset presence pulse detector."""
+def decode_spi(
+    samples: np.ndarray,
+    threshold: float,
+    sample_rate: float,
+    spi_mode: int = 0,
+) -> List[Dict]:
+    """
+    SPI on a single trace: treat clock edges (derived from SCK if present, else rising edges)
+    as latch points and sample MOSI just before each active edge. spi_mode 0..3 = CPOL*2+CPHA.
+    """
     digital = _to_digital(samples, threshold)
-    edges   = _find_edges(digital)
-    results = []
-    for idx, kind in edges:
-        if kind == "falling":
-            # Measure low duration
-            j = idx
-            while j < len(digital) and digital[j] == 0:
-                j += 1
-            low_us = (j - idx) / sample_rate * 1e6
-            if low_us > 480:
-                t_ms = idx / sample_rate * 1000
-                results.append({
-                    "proto":   "1-Wire",
-                    "time_ms": f"{t_ms:.2f}",
-                    "info":    f"RESET pulse  {low_us:.0f} us",
-                    "ack":     "-",
-                    "crc":     "-",
-                })
+    edges = _find_edges(digital)
+    spi_mode = int(spi_mode) & 3
+    cpol, cpha = spi_mode >> 1, spi_mode & 1
+    if cpol == 0 and cpha == 0:
+        active = "rising"
+    elif cpol == 0 and cpha == 1:
+        active = "falling"
+    elif cpol == 1 and cpha == 0:
+        active = "falling"
+    else:
+        active = "rising"
+    clk_idx = [idx for idx, k in edges if k == active]
+    results: List[Dict] = []
+    for bi in range(0, len(clk_idx) - 7, 8):
+        bits: List[int] = []
+        for j in range(8):
+            idx = clk_idx[bi + j]
+            sidx = max(0, idx - 1)
+            bits.append(int(digital[sidx]))
+        byte_val = sum(b << (7 - k) for k, b in enumerate(bits))
+        t_ms = clk_idx[bi] / sample_rate * 1000
+        results.append({
+            "proto": "SPI",
+            "time_ms": f"{t_ms:.2f}",
+            "info": f"MOSI 0x{byte_val:02X}  (mode {spi_mode})",
+            "ack": "-",
+            "crc": "-",
+        })
     return results
 
 
-DECODERS = {
-    "I2C":    decode_i2c,
-    "SPI":    decode_spi,
-    "UART":   decode_uart,
-    "1-Wire": decode_onewire,
-}
+def decode_onewire(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """1-Wire reset / presence: master pulls low > ~480 µs."""
+    digital = _to_digital(samples, threshold)
+    results: List[Dict] = []
+    i = 0
+    n = len(digital)
+    while i < n:
+        if i > 0 and digital[i - 1] == 1 and digital[i] == 0:
+            j = i
+            while j < n and digital[j] == 0:
+                j += 1
+            low_us = (j - i) / sample_rate * 1e6 if sample_rate > 0 else 0.0
+            if low_us > 480:
+                t_ms = i / sample_rate * 1000
+                results.append({
+                    "proto": "1-Wire",
+                    "time_ms": f"{t_ms:.2f}",
+                    "info": f"RESET  {low_us:.0f} µs",
+                    "ack": "-",
+                    "crc": "-",
+                })
+                i = j
+                continue
+        i += 1
+    return results
+
+
+PROTOCOL_NAMES = ("I2C", "SPI", "UART", "1-Wire")
 
 
 # 
@@ -197,8 +266,25 @@ class ProtocolDecoderTab(QWidget):
         self._header_strip: Optional[_HeaderStrip] = None
         self._dso_source: Callable[[], list] = lambda: []
         self._annotations: List[pg.TextItem] = []
-        self.sample_period = 0.010 # default
+        self._uart_option_rows: List[QWidget] = []
+        self._spi_mode_row: Optional[QWidget] = None
         self._build_ui()
+
+    @property
+    def sample_period(self) -> float:
+        sr = float(self.spin_srate.value())
+        return 1.0 / max(sr, 1e-9)
+
+    @sample_period.setter
+    def sample_period(self, sp: float) -> None:
+        if sp is None or sp <= 0:
+            sp = 0.010
+        hz = 1.0 / sp
+        lo, hi = self.spin_srate.minimum(), self.spin_srate.maximum()
+        hz = max(lo, min(hi, hz))
+        self.spin_srate.blockSignals(True)
+        self.spin_srate.setValue(hz)
+        self.spin_srate.blockSignals(False)
 
     # -- UI --------------------------------------------------------------------
 
@@ -220,6 +306,11 @@ class ProtocolDecoderTab(QWidget):
         self.btn_clear.setFixedWidth(90)
         self.btn_clear.clicked.connect(self._clear)
         hdr_lay.addWidget(self.btn_clear)
+
+        self.btn_export = QPushButton("EXPORT CSV")
+        self.btn_export.setFixedWidth(110)
+        self.btn_export.clicked.connect(self._export_csv)
+        hdr_lay.addWidget(self.btn_export)
 
         self.local_logger = LocalLoggerWidget("protocol_decoder", ["timestamp", "protocol", "info", "ack_crc"])
         hdr_lay.addStretch()
@@ -250,8 +341,18 @@ class ProtocolDecoderTab(QWidget):
             r.addWidget(widget)
             pg_lay.addLayout(r)
 
+        def _row_widget(label, widget) -> QWidget:
+            r = QHBoxLayout()
+            r.setContentsMargins(0, 0, 0, 0)
+            r.addWidget(ThemeLabel(label, "TEXT_MUTED", SZ_SM, bold=True))
+            r.addWidget(widget, stretch=1)
+            wrap = QWidget()
+            wrap.setLayout(r)
+            pg_lay.addWidget(wrap)
+            return wrap
+
         self.cmb_proto = QComboBox()
-        self.cmb_proto.addItems(list(DECODERS.keys()))
+        self.cmb_proto.addItems(list(PROTOCOL_NAMES))
         self.cmb_proto.currentTextChanged.connect(self._on_proto_changed)
         _row("Protocol:", self.cmb_proto)
 
@@ -266,8 +367,30 @@ class ProtocolDecoderTab(QWidget):
         self.spin_baud.setRange(110, 3_000_000)
         self.spin_baud.setValue(9600)
         self.spin_baud.setSuffix(" baud")
-        self._baud_row_widget = self.spin_baud
-        _row("Baud (UART):", self.spin_baud)
+        self._uart_option_rows.append(_row_widget("Baud (UART):", self.spin_baud))
+
+        self.cmb_uart_bits = QComboBox()
+        self.cmb_uart_bits.addItems(["8 data bits", "7 data bits"])
+        self._uart_option_rows.append(_row_widget("UART width:", self.cmb_uart_bits))
+
+        self.cmb_uart_parity = QComboBox()
+        self.cmb_uart_parity.addItems(["None", "Even", "Odd"])
+        self._uart_option_rows.append(_row_widget("UART parity:", self.cmb_uart_parity))
+
+        self.spin_uart_stop = QSpinBox()
+        self.spin_uart_stop.setRange(1, 2)
+        self.spin_uart_stop.setValue(1)
+        self.spin_uart_stop.setSuffix(" stop")
+        self._uart_option_rows.append(_row_widget("UART stops:", self.spin_uart_stop))
+
+        self.cmb_spi_mode = QComboBox()
+        self.cmb_spi_mode.addItems([
+            "0  CPOL=0 CPHA=0",
+            "1  CPOL=0 CPHA=1",
+            "2  CPOL=1 CPHA=0",
+            "3  CPOL=1 CPHA=1",
+        ])
+        self._spi_mode_row = _row_widget("SPI mode:", self.cmb_spi_mode)
 
         self.spin_srate = QDoubleSpinBox()
         self.spin_srate.setRange(1.0, 1_000_000.0)
@@ -314,8 +437,19 @@ class ProtocolDecoderTab(QWidget):
             labelOpts={"color": T.ACCENT_AMBER, "position": 0.9}
         )
         self._thresh_line.setValue(1.65)
-        self._thresh_line.sigPositionChanged.connect(
-            lambda l: self.spin_threshold.setValue(l.value()))
+
+        def _line_to_spin(line):
+            self.spin_threshold.blockSignals(True)
+            self.spin_threshold.setValue(line.value())
+            self.spin_threshold.blockSignals(False)
+
+        def _spin_to_line(v):
+            self._thresh_line.blockSignals(True)
+            self._thresh_line.setValue(v)
+            self._thresh_line.blockSignals(False)
+
+        self._thresh_line.sigPositionChanged.connect(_line_to_spin)
+        self.spin_threshold.valueChanged.connect(_spin_to_line)
         self._plot.addItem(self._thresh_line)
         r_lay.addWidget(self._plot, stretch=2)
 
@@ -355,7 +489,14 @@ class ProtocolDecoderTab(QWidget):
     # -- Internal --------------------------------------------------------------
 
     def _on_proto_changed(self, proto: str):
-        self.spin_baud.setEnabled(proto == "UART")
+        is_uart = proto == "UART"
+        is_spi = proto == "SPI"
+        for row in self._uart_option_rows:
+            row.setEnabled(is_uart)
+            row.setVisible(is_uart)
+        if self._spi_mode_row is not None:
+            self._spi_mode_row.setEnabled(is_spi)
+            self._spi_mode_row.setVisible(is_spi)
         self.lbl_proto.setText(proto)
 
     def _clear(self):
@@ -365,6 +506,31 @@ class ProtocolDecoderTab(QWidget):
         self._annotations.clear()
         self.lbl_count.setText("0")
 
+    def _export_csv(self):
+        rows = self._table.rowCount()
+        if rows == 0:
+            QMessageBox.information(self, "Export", "No rows to export. Run decode first.")
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export decoded transactions", "", "CSV (*.csv);;All (*)"
+        )
+        if not path:
+            return
+        try:
+            with open(path, "w", newline="", encoding="utf-8") as f:
+                w = csv.writer(f)
+                w.writerow([
+                    self._table.horizontalHeaderItem(c).text()
+                    for c in range(self._table.columnCount())
+                ])
+                for r in range(rows):
+                    w.writerow([
+                        (self._table.item(r, c).text() if self._table.item(r, c) else "")
+                        for c in range(self._table.columnCount())
+                    ])
+        except OSError as e:
+            QMessageBox.warning(self, "Export", str(e))
+
     def _run_decode(self):
         raw = self._dso_source()
         if len(raw) < 16:
@@ -372,11 +538,14 @@ class ProtocolDecoderTab(QWidget):
                 "DSO buffer is empty. Connect hardware or use Playback mode.")
             return
 
-        samples     = np.array(raw, dtype=float)
-        threshold   = self.spin_threshold.value()
-        sample_rate = 1.0 / self.sample_period
-        proto       = self.cmb_proto.currentText()
-        baud        = self.spin_baud.value()
+        samples = np.array(raw, dtype=float)
+        threshold = self.spin_threshold.value()
+        sample_rate = float(self.spin_srate.value())
+        if sample_rate <= 0:
+            QMessageBox.warning(self, "Sample rate", "Sample rate must be positive.")
+            return
+        proto = self.cmb_proto.currentText()
+        baud = self.spin_baud.value()
 
         # Update plot
         n = len(samples)
@@ -386,11 +555,21 @@ class ProtocolDecoderTab(QWidget):
 
         # Decode
         if proto == "UART":
-            results = decode_uart(samples, threshold, baud, sample_rate)
+            data_bits = 7 if self.cmb_uart_bits.currentIndex() == 1 else 8
+            parity = self.cmb_uart_parity.currentText()
+            results = decode_uart(
+                samples, threshold, baud, sample_rate,
+                data_bits=data_bits,
+                stop_bits=self.spin_uart_stop.value(),
+                parity=parity,
+            )
         elif proto == "I2C":
             results = decode_i2c(samples, threshold, sample_rate)
         elif proto == "SPI":
-            results = decode_spi(samples, threshold, sample_rate)
+            results = decode_spi(
+                samples, threshold, sample_rate,
+                spi_mode=self.cmb_spi_mode.currentIndex(),
+            )
         elif proto == "1-Wire":
             results = decode_onewire(samples, threshold, sample_rate)
         else:

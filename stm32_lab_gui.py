@@ -178,6 +178,7 @@ class MainWindow(QMainWindow):
         self.tab_uncertainty.sample_period = sp
         self.tab_trig.sample_period        = sp
         self.tab_proto.sample_period       = sp
+        self.tab_dsp.sample_period         = sp
         self.tab_bode.sample_period        = sp
         self.tab_wavedb.sample_period      = sp
         if hasattr(self, "tab_pid"):
@@ -833,32 +834,25 @@ class MainWindow(QMainWindow):
         self._on_disconnect()
 
     def _on_nlp_command_sent(self, cmd: str):
-        """Intersects commands from NLP tab to update local UI states."""
-        # 1. Send to hardware
+        """Send NLP-derived commands to hardware and mirror state in instrument tabs."""
         self._on_send(cmd)
-        
-        # 2. Update local UI if possible
         try:
-            # Example: #VREG:V=3.3;
-            if cmd.startswith("#VREG:V="):
-                val = float(cmd.split("=")[1].replace(";", ""))
-                self.tab_voltreg.spin_vreg.setValue(val)
-                
-            # Example: #WAVE:F=500;
-            elif cmd.startswith("#WAVE:F="):
-                val = float(cmd.split("=")[1].replace(";", ""))
-                self.tab_fg.spin_freq.setValue(int(val))
-                
-            # Example: #WAVE:T=SQ;
-            elif cmd.startswith("#WAVE:T="):
-                type_code = cmd.split("=")[1].replace(";", "")
-                # Find the name from WAVE_MAP
-                for name, code in self.tab_fg.WAVE_MAP.items():
-                    if code == type_code:
-                        self.tab_fg._select_wave(name)
-                        break
+            msg = self._parser.parse(cmd)
+            if msg is None:
+                return
+            if msg.kind == "VREG" and "V" in msg.fields:
+                self.tab_vreg.spin_vreg.setValue(float(msg.fields["V"]))
+            elif msg.kind == "WAVE":
+                if "T" in msg.fields:
+                    type_code = msg.fields["T"].strip()
+                    for name, code in self.tab_fg.WAVE_MAP.items():
+                        if code == type_code:
+                            self.tab_fg._select_wave(name)
+                            break
+                if "F" in msg.fields:
+                    self.tab_fg.spin_freq.setValue(int(float(msg.fields["F"])))
         except Exception as e:
-            print(f"NLP UI Sync failed: {e}")
+            log.warning("NLP UI sync failed: %s", e)
 
     def _on_dsp_overlay(self, arr):
         """DSP pipeline result: overlay on DSO plot."""

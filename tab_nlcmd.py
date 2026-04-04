@@ -1,14 +1,16 @@
 """
 tab_nlcmd.py - Natural Language Command Interface for STM32 Lab GUI v6.0
 
-Parses plain-English commands with a local regex/grammar engine (no API key):
-  "set output to 3.3V"        -> #VREG:V=3.3;
-  "show me a 500Hz square wave" -> #WAVE:T=SQ; + #WAVE:F=500;
-  "what is the dominant frequency?" -> reads stats and responds
-  "connect"                   -> triggers serial connect
-  "disconnect"                -> serial disconnect
+Parses plain-English commands with a local regex/grammar engine (no API key).
+Commands update hardware via serial and are mirrored in the relevant tabs
+(Function Gen, Voltage Reg, etc.) by the main window.
 
-WHY: Accessibility + novelty - great for education + papers.
+Examples:
+  "set output to 3.3V"              -> #VREG:V=3.3;
+  "square wave at 400kHz"           -> #WAVE:T=SQ; #WAVE:F=400000;
+  "set the function generator to a 1 MHz sine wave" -> wave + freq
+  "set frequency to 2500 Hz"        -> #WAVE:F=2500;
+  "what is the dominant frequency?" -> reads stats (does not change FG)
 """
 
 import re
@@ -17,22 +19,38 @@ from typing import Callable, List, Optional, Tuple
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton,
-    QTextEdit, QGroupBox
+    QTextEdit, QGroupBox,
 )
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QFont
 
-from themes  import T
+from themes import T
 from styles import SZ_XS, SZ_SM, SZ_BODY, SZ_MD, SZ_LG, SZ_STAT, SZ_SETPT, SZ_BIG, _mono_font, _ui_font
 from widgets import ThemeLabel, _HeaderStrip, make_header
 
 
-# -- Grammar Engine -----------------------------------------------------------
+# -- Grammar engine -----------------------------------------------------------
 
-_VOLT_PAT  = r"(\d+\.?\d*)\s*[vV](?:olt(?:s)?)?"
-_FREQ_PAT  = r"(\d+\.?\d*)\s*(?:Hz|hz|KHz|kHz|khz)?"
-_WAVE_MAP  = {"square": "SQ", "triangle": "TR", "sawtooth": "SA",
-              "sine": "SI", "para": "PA", "parabola": "PA"}
+_VOLT_PAT = r"(\d+\.?\d*)\s*[vV](?:olt(?:s)?)?"
+
+_WAVE_MAP = {
+    "square": "SQ",
+    "triangle": "TR",
+    "sawtooth": "SA",
+    "sine": "SI",
+    "para": "PA",
+    "parabola": "PA",
+    "half-wave": "HW",
+    "half wave": "HW",
+    "full-wave": "FW",
+    "full wave": "FW",
+    "sinc": "SN",
+    "step": "ST",
+    "staircase": "SC",
+    "gaussian": "GA",
+    "noise": "NO",
+    "dc": "DC",
+    "ground": "G",
+}
 
 
 def _parse_voltage(text: str) -> Optional[float]:
@@ -41,79 +59,182 @@ def _parse_voltage(text: str) -> Optional[float]:
 
 
 def _parse_freq(text: str) -> Optional[float]:
-    m = re.search(r"(\d+\.?\d*)\s*(k?hz)", text, re.IGNORECASE)
+    """
+    Parse frequency from free text: Hz, kHz/K/k, MHz/M, or bare number near 'freq'.
+    """
+    t = text.strip()
+
+    m = re.search(r"(\d+\.?\d*)\s*(?:mhz|MHz)\b", t)
+    if m:
+        return float(m.group(1)) * 1e6
+
+    m = re.search(r"(\d+\.?\d*)\s*k\s*hz\b", t, re.I)
+    if m:
+        return float(m.group(1)) * 1e3
+
+    m = re.search(r"(\d+\.?\d*)\s*khz\b", t, re.I)
+    if m:
+        return float(m.group(1)) * 1e3
+
+    m = re.search(r"(\d+\.?\d*)\s*k\b(?![a-zA-Z])", t, re.I)
+    if m:
+        return float(m.group(1)) * 1e3
+
+    m = re.search(r"(\d+\.?\d*)\s*hz\b", t, re.I)
+    if m:
+        return float(m.group(1))
+
+    m = re.search(r"(?:freq|frequency)\s*(?:to|=|:)?\s*(\d+\.?\d*)", t, re.I)
+    if m:
+        return float(m.group(1))
+
+    m = re.search(r"(\d+\.?\d*)\s*(k?)\s*hz", t, re.I)
     if m:
         val = float(m.group(1))
-        if "k" in m.group(2).lower():
-            val *= 1000
+        if m.group(2).lower() == "k":
+            val *= 1e3
         return val
-    m2 = re.search(r"(\d+)", text)
-    return float(m2.group(1)) if m2 else None
+
+    return None
 
 
 def _parse_wave(text: str) -> Optional[str]:
-    for word, code in _WAVE_MAP.items():
-        if word in text.lower():
-            return code
+    tl = text.lower()
+    # Longer phrases first
+    keys = sorted(_WAVE_MAP.keys(), key=len, reverse=True)
+    for word in keys:
+        if word in tl:
+            return _WAVE_MAP[word]
     return None
+
+
+def _is_freq_query(text: str) -> bool:
+    """True if user is asking for a measurement, not setting FG frequency."""
+    tl = text.lower().strip()
+    if re.search(r"\bdominant\s+frequenc|\bdominant\s+freq\b", tl):
+        return True
+    if re.search(r"\bfundamental\s+frequenc", tl):
+        return True
+    if re.match(
+        r"^(what|which)\s+is\s+the\s+(dominant\s+)?frequenc", tl,
+    ):
+        return True
+    if re.match(r"^(what|which)\s+is\s+the\s+frequency\?", tl) and "wave" not in tl:
+        return True
+    return False
+
+
+def _is_volt_query(text: str) -> bool:
+    tl = text.lower().strip()
+    if re.match(r"^(what|read|measure)\b", tl):
+        if re.search(r"\b(volt|voltage|vrms|rms)\b", tl):
+            return True
+    return False
+
+
+def _wants_wave_with_freq(text: str) -> bool:
+    """Both waveform shape and numeric frequency are present; user intent is to set FG."""
+    if _is_freq_query(text):
+        return False
+    f = _parse_freq(text)
+    w = _parse_wave(text)
+    if f is None or w is None:
+        return False
+    tl = text.lower()
+    # Reject if looks like pure question with numbers
+    if tl.startswith("what ") and "set" not in tl and "make" not in tl and "show" not in tl:
+        return False
+    return True
 
 
 class NLGrammar:
     """Rule-based NLP for lab commands. No external API required."""
 
-    RULES: List[Tuple[re.Pattern, Callable]] = []  # built in __init__
+    def __init__(
+        self,
+        stats_fn: Callable,
+        send_fn: Callable,
+        connect_fn: Callable,
+        disconnect_fn: Callable,
+    ):
+        self._stats_fn = stats_fn
+        self._send_fn = send_fn
+        self._connect_fn = connect_fn
+        self._disconnect_fn = disconnect_fn
 
-    def __init__(self, stats_fn: Callable, send_fn: Callable,
-                 connect_fn: Callable, disconnect_fn: Callable):
-        self._stats_fn       = stats_fn
-        self._send_fn        = send_fn
-        self._connect_fn     = connect_fn
-        self._disconnect_fn  = disconnect_fn
-
+        freq_fragment = (
+            r"(\d+\.?\d*)\s*(?:mhz|MHz|khz|k\s*hz|KHz|Hz|hz|\bk\b)"
+        )
         self._rules: List[Tuple[re.Pattern, Callable]] = [
-            # Voltage output
-            (re.compile(r"(set|output|vreg|voltage).{0,20}(" + _VOLT_PAT + r")", re.I),
-             self._cmd_vreg),
-            # Wave type + freq
-            (re.compile(r"(square|triangle|parabola|sine)\s*wave.{0,30}" + _FREQ_PAT, re.I),
-             self._cmd_wave_full),
-            # Freq only
-            (re.compile(r"(set|change|freq|frequency).{0,15}" + _FREQ_PAT, re.I),
-             self._cmd_freq),
-            # Wave type only
-            (re.compile(r"(square|triangle|parabola|sine)\s*wave", re.I),
-             self._cmd_wave_type),
-            # Frequency query
-            (re.compile(r"(what|dominant|frequency|freq)", re.I),
-             self._cmd_query_freq),
-            # Voltage query
-            (re.compile(r"(what|read|measure).{0,20}(volt|voltage|V\b)", re.I),
-             self._cmd_query_volt),
-            # Connect
-            (re.compile(r"\bconnect\b", re.I),
-             self._cmd_connect),
-            # Disconnect
-            (re.compile(r"\bdisconnect\b", re.I),
-             self._cmd_disconnect),
-            # Help
-            (re.compile(r"\bhelp\b", re.I),
-             self._cmd_help),
+            (re.compile(r"(set|output|vreg|voltage).{0,35}(" + _VOLT_PAT + r")", re.I), self._cmd_vreg),
+            (
+                re.compile(
+                    r"(square|triangle|sawtooth|sine|parabola|para|half[- ]?wave|full[- ]?wave)\s*wave.{0,50}?"
+                    + freq_fragment,
+                    re.I,
+                ),
+                self._cmd_wave_full_regex,
+            ),
+            (
+                re.compile(
+                    freq_fragment + r".{0,35}(square|triangle|sawtooth|sine|parabola|para)\s*wave?",
+                    re.I,
+                ),
+                self._cmd_wave_full_regex_rev,
+            ),
+            (
+                re.compile(
+                    r"(set|change|make|show|give|use|apply|put).{0,50}(square|triangle|sawtooth|sine|parabola).{0,50}?"
+                    + freq_fragment,
+                    re.I,
+                ),
+                self._cmd_wave_full_phrase,
+            ),
+            (
+                re.compile(r"(set|change|adjust).{0,20}(freq|frequency).{0,20}" + freq_fragment, re.I),
+                self._cmd_freq_regex,
+            ),
+            (
+                re.compile(r"(square|triangle|sawtooth|sine|parabola|para)\s*wave", re.I),
+                self._cmd_wave_type,
+            ),
+            (re.compile(r"\bconnect\b", re.I), self._cmd_connect),
+            (re.compile(r"\bdisconnect\b", re.I), self._cmd_disconnect),
+            (re.compile(r"\bhelp\b", re.I), self._cmd_help),
         ]
 
     def process(self, text: str) -> Tuple[str, List[str]]:
-        """
-        Returns (human_response, list_of_commands_sent).
-        """
         text = text.strip()
+        if not text:
+            return ("", [])
+
+        if _is_volt_query(text):
+            return self._cmd_query_volt(text, None)
+
+        if _is_freq_query(text):
+            return self._cmd_query_freq(text, None)
+
+        if _wants_wave_with_freq(text):
+            return self._emit_wave(_parse_wave(text) or "SQ", _parse_freq(text) or 100.0)
+
         for pattern, handler in self._rules:
             m = pattern.search(text)
             if m:
                 return handler(text, m)
+
         return ("I didn't understand that. Type 'help' for examples.", [])
 
-    # -- Handlers --------------------------------------------------------------
+    def _emit_wave(self, wave_code: str, freq_hz: float) -> Tuple[str, List[str]]:
+        freq_i = int(round(max(0.0, freq_hz)))
+        cmds = [f"#WAVE:T={wave_code};", f"#WAVE:F={freq_i};"]
+        for c in cmds:
+            self._send_fn(c)
+        inv = {v: k for k, v in _WAVE_MAP.items()}
+        wave_name = inv.get(wave_code, wave_code)
+        pretty = f"{freq_i:,} Hz" if freq_i < 1_000_000 else f"{freq_i / 1e6:.3g} MHz"
+        return (f"Setting {wave_name} wave at {pretty}", cmds)
 
-    def _cmd_vreg(self, text, m):
+    def _cmd_vreg(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
         v = _parse_voltage(text)
         if v is None:
             return ("Could not parse voltage value.", [])
@@ -122,36 +243,50 @@ class NLGrammar:
         self._send_fn(cmd)
         return (f"Setting output voltage to {v:.1f} V", [cmd])
 
-    def _cmd_wave_full(self, text, m):
+    def _cmd_wave_full_regex(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
         wave_code = _parse_wave(text) or "SQ"
-        freq      = _parse_freq(text) or 100
-        cmds      = [f"#WAVE:T={wave_code};", f"#WAVE:F={int(freq)};"]
-        for c in cmds:
-            self._send_fn(c)
-        wave_name = {v: k for k, v in _WAVE_MAP.items()}.get(wave_code, wave_code)
-        return (f"Setting {wave_name} wave at {int(freq)} Hz", cmds)
+        freq = _parse_freq(text)
+        if freq is None:
+            return ("Could not parse frequency.", [])
+        return self._emit_wave(wave_code, freq)
 
-    def _cmd_freq(self, text, m):
-        freq = _parse_freq(text) or 100
-        cmd  = f"#WAVE:F={int(freq)};"
+    def _cmd_wave_full_regex_rev(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
+        return self._cmd_wave_full_regex(text, m)
+
+    def _cmd_wave_full_phrase(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
+        return self._cmd_wave_full_regex(text, m)
+
+    def _cmd_freq_regex(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
+        freq = _parse_freq(text)
+        if freq is None:
+            return ("Could not parse frequency.", [])
+        freq_i = int(round(freq))
+        cmd = f"#WAVE:F={freq_i};"
         self._send_fn(cmd)
-        return (f"Setting frequency to {int(freq)} Hz", [cmd])
+        return (f"Setting frequency to {freq_i:,} Hz", [cmd])
 
-    def _cmd_wave_type(self, text, m):
+    def _cmd_wave_type(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
+        if re.match(r"^\s*(what|which|how|why)\b", text, re.I):
+            return (
+                "For scope readings ask: 'what is the dominant frequency?'. "
+                "To set the generator shape: e.g. 'sine wave' or 'square wave at 400 kHz'.",
+                [],
+            )
         wave_code = _parse_wave(text) or "SQ"
-        cmd       = f"#WAVE:T={wave_code};"
+        cmd = f"#WAVE:T={wave_code};"
         self._send_fn(cmd)
-        wave_name = {v: k for k, v in _WAVE_MAP.items()}.get(wave_code, wave_code)
-        return (f"Setting {wave_name} wave", [cmd])
+        inv = {v: k for k, v in _WAVE_MAP.items()}
+        wave_name = inv.get(wave_code, wave_code)
+        return (f"Setting {wave_name} wave (frequency unchanged)", [cmd])
 
-    def _cmd_query_freq(self, text, m):
+    def _cmd_query_freq(self, text: str, m: Optional[re.Match]) -> Tuple[str, List[str]]:
         s = self._stats_fn()
         if not s:
             return ("No data available yet.", [])
         f = s.get("dom_freq", 0)
-        return (f"Dominant frequency: {f:.2f} Hz  (from {s.get('n',0)} samples)", [])
+        return (f"Dominant frequency: {f:.2f} Hz  (from {s.get('n', 0)} samples)", [])
 
-    def _cmd_query_volt(self, text, m):
+    def _cmd_query_volt(self, text: str, m: Optional[re.Match]) -> Tuple[str, List[str]]:
         s = self._stats_fn()
         if not s:
             return ("No data available yet.", [])
@@ -159,34 +294,35 @@ class NLGrammar:
         vrms = s.get("vrms", 0)
         return (f"Mean: {mean:.3f} V    VRMS: {vrms:.3f} V", [])
 
-    def _cmd_connect(self, text, m):
+    def _cmd_connect(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
         self._connect_fn()
         return ("Attempting to connect...", [])
 
-    def _cmd_disconnect(self, text, m):
+    def _cmd_disconnect(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
         self._disconnect_fn()
         return ("Disconnecting...", [])
 
-    def _cmd_help(self, text, m):
+    def _cmd_help(self, text: str, m: re.Match) -> Tuple[str, List[str]]:
         msg = (
             "Examples:\n"
             "  'set output to 3.3V'\n"
-            "  'show me a 500Hz square wave'\n"
-            "  'what is the dominant frequency?'\n"
-            "  'set frequency to 1kHz'\n"
+            "  'square wave at 400 kHz'  /  '400kHz square wave'\n"
+            "  'set the sine wave to 1 MHz'\n"
+            "  'set frequency to 2500 Hz'\n"
             "  'triangle wave'\n"
+            "  'what is the dominant frequency?'\n"
             "  'connect'  /  'disconnect'\n"
         )
         return (msg, [])
 
 
-# -- NL Command Tab -----------------------------------------------------------
+# -- NL Command tab ------------------------------------------------------------
 
 class NLCommandTab(QWidget):
     """Natural Language Command Interface - no API key required."""
 
-    send_requested       = pyqtSignal(str)
-    connect_requested    = pyqtSignal()
+    send_requested = pyqtSignal(str)
+    connect_requested = pyqtSignal()
     disconnect_requested = pyqtSignal()
 
     def __init__(self):
@@ -195,15 +331,13 @@ class NLCommandTab(QWidget):
         self._history: List[str] = []
         self._hist_idx = -1
         self._stats_fn: Callable = lambda: {}
-        self._grammar  = NLGrammar(
-            stats_fn      = lambda: self._stats_fn(),
-            send_fn       = self.send_requested.emit,
-            connect_fn    = self.connect_requested.emit,
-            disconnect_fn = self.disconnect_requested.emit,
+        self._grammar = NLGrammar(
+            stats_fn=lambda: self._stats_fn(),
+            send_fn=self.send_requested.emit,
+            connect_fn=self.connect_requested.emit,
+            disconnect_fn=self.disconnect_requested.emit,
         )
         self._build_ui()
-
-    # -- UI --------------------------------------------------------------------
 
     def _build_ui(self):
         root = QVBoxLayout(self)
@@ -220,7 +354,6 @@ class NLCommandTab(QWidget):
         c_lay.setSpacing(14)
         root.addWidget(content, stretch=1)
 
-        # Conversation log
         log_grp = QGroupBox("CONVERSATION")
         ll = QVBoxLayout(log_grp)
         ll.setContentsMargins(10, 20, 10, 10)
@@ -230,13 +363,18 @@ class NLCommandTab(QWidget):
         ll.addWidget(self._log)
         c_lay.addWidget(log_grp, stretch=1)
 
-        # Suggested commands
         sugg_grp = QGroupBox("QUICK COMMANDS")
         sl = QHBoxLayout(sugg_grp)
         sl.setContentsMargins(10, 20, 10, 10)
         sl.setSpacing(8)
-        for label in ["3.3V Output", "5V Output", "Square 100Hz",
-                      "Triangle 500Hz", "What is the frequency?", "Help"]:
+        for label in [
+            "3.3V Output",
+            "5V Output",
+            "Square 100Hz",
+            "400kHz square wave",
+            "What is the dominant frequency?",
+            "Help",
+        ]:
             btn = QPushButton(label)
             btn.setFixedHeight(32)
             btn.clicked.connect(lambda _, t=label: self._submit(t))
@@ -244,7 +382,6 @@ class NLCommandTab(QWidget):
         sl.addStretch()
         c_lay.addWidget(sugg_grp)
 
-        # Input row
         in_grp = QGroupBox("TYPE A COMMAND")
         il = QHBoxLayout(in_grp)
         il.setContentsMargins(10, 20, 10, 10)
@@ -252,7 +389,8 @@ class NLCommandTab(QWidget):
         self._input = QLineEdit()
         self._input.setFont(_ui_font(SZ_BODY))
         self._input.setPlaceholderText(
-            "e.g.  set output to 3.3V  |  show me a 500Hz square wave  |  help")
+            "e.g. set output to 3.3V  |  square wave at 400 kHz  |  what is the dominant frequency?"
+        )
         self._input.returnPressed.connect(lambda: self._submit(self._input.text()))
         self._input.installEventFilter(self)
         il.addWidget(self._input, stretch=1)
@@ -264,35 +402,28 @@ class NLCommandTab(QWidget):
 
         self._log_append("Lab AI ready. Type a command below or click a Quick Command.", T.ACCENT_CYAN)
 
-    # -- Theme -----------------------------------------------------------------
-
     def update_theme(self):
         if self._header_strip:
             self._header_strip.update_theme()
 
-    # -- Public API ------------------------------------------------------------
-
     def set_stats_source(self, fn: Callable):
         self._stats_fn = fn
 
-    # -- History navigation ----------------------------------------------------
-
     def eventFilter(self, obj, event):
         from PyQt5.QtCore import QEvent
+
         if obj is self._input and event.type() == QEvent.KeyPress:
             if event.key() == Qt.Key_Up and self._history:
                 self._hist_idx = max(0, self._hist_idx - 1)
                 self._input.setText(self._history[self._hist_idx])
                 return True
-            elif event.key() == Qt.Key_Down:
+            if event.key() == Qt.Key_Down:
                 self._hist_idx = min(len(self._history), self._hist_idx + 1)
                 self._input.setText(
-                    self._history[self._hist_idx]
-                    if self._hist_idx < len(self._history) else "")
+                    self._history[self._hist_idx] if self._hist_idx < len(self._history) else ""
+                )
                 return True
         return super().eventFilter(obj, event)
-
-    # -- Core ------------------------------------------------------------------
 
     def _submit(self, text: str):
         text = text.strip()
@@ -310,8 +441,7 @@ class NLCommandTab(QWidget):
     def _log_append(self, text: str, color: str):
         esc = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         self._log.append(
-            f'<span style="color:{color}; font-family:Consolas,monospace;">'
-            f'{esc}</span>'
+            f'<span style="color:{color}; font-family:Consolas,monospace;">' f"{esc}</span>"
         )
         sb = self._log.verticalScrollBar()
         sb.setValue(sb.maximum())

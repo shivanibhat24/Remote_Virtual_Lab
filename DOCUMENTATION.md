@@ -1,72 +1,55 @@
-# STM32 Laboratory Instrumentation Suite: Technical Manual (v6.0 Platinum)
+# Remote Virtual Lab — Technical Documentation (v6.x)
 
-**A Comprehensive Architectural and Operational Reference for Advanced Embedded Verification and Laboratory Instrumentation.**
+Operational reference for the PyQt5 **STM32 Lab GUI** in this repository.
 
----
+## Architecture
 
-## 1. System Architecture and Design
+- **Entry point:** `stm32_lab_gui.py` — `MainWindow` builds tabs, wires serial I/O, and synchronizes settings.
+- **Themes:** `themes.py`, `styles.py`, `widgets.py` — shared typography and cards.
+- **Serial:** `serial_manager.py` — connect/disconnect, read loop feeding `DataParser`.
+- **Parsing:** `data_engine.py` — `DataParser` for `#KIND:KEY=VAL,...;` frames, `CommandBuilder` for outbound commands, `AnalyticsEngine` for rolling stats.
 
-The STM32 Laboratory Instrumentation Suite is a modular, event-driven application developed using the PyQt5 framework. The primary objective is to provide a unified dashboard for managing multiple laboratory instruments with a distraction-free, professional-grade interface.
+## Serial protocol (summary)
 
-### The Dynamic UI Synchronization Engine
-- **Sidebar Navigation Control**: Implements a custom `QListWidget` with `Qt.UserRole` mapping for efficient `QStackedWidget` navigation.
-- **Recursive Typography Refresh (V6.0)**: A recursive visitation algorithm traverses the UI tree upon theme changes. It executes the `update_theme()` method on all children to ensure font synchronization across all headers, cards, and digital displays.
-- **Theme Architecture**: Themes are centralized in `themes.py` using a standardized `T` object (e.g., `T.PRIMARY`, `T.CARD_BG`, `T.ACCENT_BLUE`).
+Outbound examples:
 
----
+- `#VREG:V=3.3;` — regulator setpoint  
+- `#WAVE:T=SQ;` — waveform type code  
+- `#WAVE:F=1000;` — frequency (Hz), clamped in `CommandBuilder.wave_freq` (default cap 1 MHz in software; must match firmware)  
+- `#PID:...`, `#BOOST:...` — see firmware docs  
 
-## 2. Laboratory Modules: Functional Overviews
+Inbound examples: `#DATA:X=...`, `#ACK:...`, `#ERR:...`, `#BOOST:...`, `#TEMP:...`.
 
-### Oscilloscope and Multimeter (DSO)
-- **High-Frequency Sampling**: 500-sample buffer with 20+ FPS update rate.
-- **Measurement Interface**: Includes dual vertical cursors for Delta Time and Delta Voltage delta readout.
-- **Trace Color Selection**: Native `QColorDialog` integration for signal personalization.
+## Natural language command (NL) pipeline
 
-### Function Generator (15+ Waveforms)
-- **Advanced Signal Processing**: Generates recursive and mathematical waveforms (Sine, Step, Gaussian, Sinc, etc.).
-- **Triggered Capture**: Supports one-shot triggers for Pulse waveforms (Half-Cycle or Full-Cycle).
+**Module:** `tab_nlcmd.py` — class `NLGrammar`.
 
-### PID Tuner (Boost Converter)
-- **Closed-Loop Verification Interface**: Real-time closed-loop control of a Boost Converter target hardware.
-- **Analytical Metrics**: Integrated online analysis for settling time and overshoot percentage.
+1. User text is classified (measurement question vs. command).  
+2. **Measurement** queries (e.g. dominant frequency, voltage stats) use `AnalyticsEngine.stats()` only — they do not change the function generator.  
+3. **Wave + frequency** commands parse shape and numeric frequency (Hz / kHz / MHz) and emit `#WAVE:T=...;` then `#WAVE:F=...;`.  
+4. `MainWindow._on_nlp_command_sent` sends each line to the device **and** parses it again with `DataParser` to update:
+   - **Function Generator** tab — `_select_wave()` and `spin_freq`  
+   - **Voltage Reg** tab — `spin_vreg` for `#VREG:...`  
 
----
+**Bug fix note:** UI sync previously referenced a non-existent `tab_voltreg` attribute; it now uses `tab_vreg` and structured parsing so FG and regulator controls stay aligned with NLP.
 
-## 3. Communication Protocols and Interfacing
+## Function generator UI range
 
-The suite utilizes a standardized packet-based communication protocol designed for Serial and MQTT interfaces.
+`tab_funcgen.py` exposes **0–1,000,000 Hz** in the spin box and slider so high-frequency NLP commands (e.g. 400 kHz) display correctly. Confirm your STM32 waveform timer supports the requested frequency.
 
-### Command Structure (Transmission)
-All commands follow the `#KEY:VALUE;` format:
-- `#VREG:V=3.3;` - Output voltage set to 3.3V
-- `#WAVE:F=1000;` - Frequency set to 1,000 Hertz
-- `#FG_PULSE:H` - Trigger single half-cycle pulse
+## DSP and protocol tabs
 
-### Telemetry Structure (Reception)
-- `#DATA:X=1.23;` - Signal sampling telemetry
-- `#BOOST:V=5.02;` - Feedback from the PID Boost Converter
-- `#TEMP:T=45.2;` - Thermal telemetry
-- `#ACK:M=OK;` - Hardware acknowledgment signal
+- **DSP:** `tab_dsp.py` — SciPy-based chain on the DSO buffer; `sample_period` follows global settings.  
+- **Protocol:** `tab_protocol.py` — thresholded decoders; sample rate comes from the on-tab **Hz** control (synced from global settings).
 
----
+## MQTT / cloud
 
-## 4. Intelligent Automation and Integration
+Optional bridge in `mqtt_bridge.py`; REPL/cloud tabs depend on installed extras (`websockets`).
 
-### NLP Command Parsing
-- **Local Grammar Engine**: A specialized `NLGrammar` class performs rule-based parsing of natural language text into hexadecimal hardware commands.
-- **UI Synchronization**: Commands issued through the NLP terminal are intercepted to automatically update the local UI states of all relevant laboratory instruments.
+## Settings persistence
 
-### Waveform Database Persistence
-- **SQLite Integration**: Captures are hashed using a 16-character SHA-256 algorithm and stored in a local SQLite database for historical search and similarity comparison.
+`settings_manager.py` stores window geometry, theme, sample period, and selected widget values (including FG frequency and regulator voltage).
 
 ---
 
-## 5. MQTT Cloud and NAT Traversal
-
-- **Broker Infrastructure**: Uses the Mosquitto global broker for remote NAT-to-NAT communication.
-- **Client Protocol**: `stm32lab/{session_id}/[tx/rx]`
-- **Session Security**: Dynamic session ID generation on startup with a visitation prompt for user verification.
-
----
-
-*This technical manual is maintained for the STM32 Lab GUI v6.0 Platinum codebase. For technical support, please refer to the source documentation in the primary repository.*
+*This manual matches the `Remote_Virtual_Lab` codebase. Update command caps and protocol details to reflect your firmware revision.*

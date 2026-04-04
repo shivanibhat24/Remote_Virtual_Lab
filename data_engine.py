@@ -34,8 +34,8 @@ class CommandBuilder:
 
     @staticmethod
     def wave_freq(f: int) -> str:
-        """Extended cap to 100,000 Hz for Bode sweeps."""
-        return f"#WAVE:F={max(0, min(100_000, f))};"
+        """Clamp to firmware-safe range (adjust if your STM32 build differs)."""
+        return f"#WAVE:F={max(0, min(1_000_000, int(f)))};"
 
     @staticmethod
     def pid_cmd(kp: float, ki: float, kd: float, sp: float) -> str:
@@ -158,6 +158,7 @@ class AnalyticsEngine:
     def __init__(self, window: int = 500, sample_period: float = 0.010):
         self._samples: deque = deque(maxlen=window)
         self.sample_period   = sample_period
+        self.cal_coeffs: Optional[List[float]] = None
 
     def push(self, v: float):
         self._samples.append(v)

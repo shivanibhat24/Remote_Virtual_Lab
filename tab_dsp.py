@@ -77,6 +77,26 @@ BLOCK_DEFS: Dict[str, Dict[str, Any]] = {
                    ("Taps", 51, 3, 511)],
         "info": "FIR low-pass with Hamming window"
     },
+    "Moving Average": {
+        "category": "Smooth",
+        "params": [("Window", 16, 3, 501)],
+        "info": "Centered moving average (same length as input)"
+    },
+    "Savitzky-Golay": {
+        "category": "Smooth",
+        "params": [("Window", 11, 5, 101), ("Order", 3, 1, 5)],
+        "info": "Savitzky–Golay smoothing (window must be odd)"
+    },
+    "Notch": {
+        "category": "Filter",
+        "params": [("Center Hz", 50.0, 0.5, 50000.0), ("Q", 30.0, 1.0, 200.0)],
+        "info": "IIR notch (removes narrowband interference, e.g. mains)"
+    },
+    "DC Block (HPF)": {
+        "category": "Filter",
+        "params": [("Cutoff Hz", 1.0, 0.01, 5000.0), ("Order", 2, 1, 6)],
+        "info": "High-pass to remove DC and slow drift"
+    },
     "Hilbert Envelope": {
         "category": "Transform",
         "params": [],
@@ -95,8 +115,19 @@ BLOCK_DEFS: Dict[str, Dict[str, Any]] = {
     },
     "Measure ENOB": {
         "category": "Measure",
-        "params": [("Fund Hz", 50.0, 1.0, 50000.0)],
-        "info": "Effective Number of Bits"
+        "params": [("Fund Hz", 50.0, 1.0, 50000.0),
+                   ("Harmonics", 9, 2, 20)],
+        "info": "ENOB from SINAD (fundamental vs noise+distortion harmonics)"
+    },
+    "Measure RMS": {
+        "category": "Measure",
+        "params": [],
+        "info": "RMS amplitude of current waveform"
+    },
+    "Measure Vpp": {
+        "category": "Measure",
+        "params": [],
+        "info": "Peak-to-peak voltage"
     },
 }
 
@@ -127,8 +158,6 @@ class DSPPipelineTab(QWidget):
     # Emits processed signal array + measurement dict for overlaying on DSO
     overlay_ready = pyqtSignal(object)   # np.ndarray
 
-    SAMPLE_RATE = 100.0   # Hz (1 / 0.010 s)
-
     def __init__(self):
         super().__init__()
         self._header_strip: Optional[_HeaderStrip] = None
@@ -136,7 +165,18 @@ class DSPPipelineTab(QWidget):
         self._param_widgets: List[QWidget]         = []   # current param panel widgets
         self._selected_block_idx = -1
         self._dso_source: Callable[[], list] = lambda: []
+        self._sample_period: float = 0.010
         self._build_ui()
+
+    @property
+    def sample_period(self) -> float:
+        return self._sample_period
+
+    @sample_period.setter
+    def sample_period(self, sp: float) -> None:
+        if sp is None or sp <= 0:
+            sp = 0.010
+        self._sample_period = float(sp)
 
     # -- UI Build -------------------------------------------------------------
     # UI Build
@@ -301,8 +341,8 @@ class DSPPipelineTab(QWidget):
         item = QListWidgetItem(block.label())
         # Colour-code by category
         cat = block.defn["category"]
-        color_map = {"Filter": T.ACCENT_BLUE, "Transform": T.PRIMARY,
-                     "Measure": T.ACCENT_AMBER}
+        color_map = {"Filter": T.ACCENT_BLUE, "Smooth": T.ACCENT_PUR,
+                     "Transform": T.PRIMARY, "Measure": T.ACCENT_AMBER}
         item.setForeground(QColor(color_map.get(cat, T.TEXT)))
         self.block_list.addItem(item)
 
@@ -396,8 +436,8 @@ class DSPPipelineTab(QWidget):
                 "DSO buffer is empty - connect hardware or use Playback mode.")
             return
 
-        x   = np.array(raw, dtype=float)
-        fs  = self.SAMPLE_RATE
+        x = np.asarray(raw, dtype=float)
+        fs = 1.0 / max(self._sample_period, 1e-12)
         results: Dict[str, str] = {}
 
         for block in self._blocks:
@@ -407,6 +447,8 @@ class DSPPipelineTab(QWidget):
             try:
                 if cat == "Filter":
                     x = self._apply_filter(name, x, vals, fs)
+                elif cat == "Smooth":
+                    x = self._apply_smooth(name, x, vals, fs)
                 elif name == "Hilbert Envelope":
                     x = np.abs(sp_signal.hilbert(x))
                 elif cat == "Measure":
@@ -450,51 +492,96 @@ class DSPPipelineTab(QWidget):
             cutoff, order, rp = vals[0]/nyq, int(vals[1]), vals[2]
             b, a = sp_signal.cheby1(order, rp, min(cutoff, 0.999), btype="high")
         elif name == "FIR Window LP":
-            cutoff, taps = vals[0]/nyq, int(vals[1]) | 1   # ensure odd (BUG-FIX: was vals[0+1])
-            b = sp_signal.firwin(taps, min(cutoff, 0.999))
+            cutoff, taps = vals[0] / nyq, int(vals[1]) | 1  # ensure odd taps
+            b = sp_signal.firwin(taps, min(max(cutoff, 1e-6), 0.999))
             return sp_signal.filtfilt(b, [1.0], x)
+        elif name == "Notch":
+            f0, Q = float(vals[0]), max(float(vals[1]), 1e-6)
+            w0 = min(f0 / (fs / 2.0), 0.999999)
+            b, a = sp_signal.iirnotch(w0, Q)
+            return sp_signal.filtfilt(b, a, x)
+        elif name == "DC Block (HPF)":
+            co, order = vals[0] / nyq, int(vals[1])
+            co = min(max(co, 1e-6), 0.999)
+            b, a = sp_signal.butter(order, co, btype="high")
+            return sp_signal.filtfilt(b, a, x)
         else:
             return x
         return sp_signal.filtfilt(b, a, x)
 
+    def _apply_smooth(self, name: str, x: np.ndarray,
+                      vals: List[float], fs: float) -> np.ndarray:
+        if name == "Moving Average":
+            w = int(vals[0])
+            w = max(3, w | 1)
+            k = np.ones(w, dtype=float) / float(w)
+            return np.convolve(x, k, mode="same")
+        if name == "Savitzky-Golay":
+            n = len(x)
+            win = max(5, int(vals[0]) | 1)
+            max_odd = n if (n % 2 == 1) else n - 1
+            win = min(win, max_odd)
+            if win < 5:
+                return x
+            order = int(vals[1])
+            order = max(1, min(order, win - 1))
+            try:
+                return sp_signal.savgol_filter(x, win, order)
+            except ValueError:
+                return x
+        return x
+
     def _apply_measure(self, name: str, x: np.ndarray,
                        vals: List[float], fs: float,
                        results: Dict[str, str]):
-        fund_hz = vals[0]
-        freqs   = np.fft.rfftfreq(len(x), d=1.0/fs)
-        Xf      = np.fft.rfft(x)
-        mags    = np.abs(Xf)
+        if name == "Measure RMS":
+            results["RMS"] = f"{float(np.sqrt(np.mean(np.square(x)))):.6f}"
+            return
+        if name == "Measure Vpp":
+            results["Vpp"] = f"{float(np.max(x) - np.min(x)):.6f}"
+            return
 
-        # Fundamental bin
+        fund_hz = float(vals[0])
+        freqs = np.fft.rfftfreq(len(x), d=1.0 / fs)
+        Xf = np.fft.rfft(x)
+        mags = np.abs(Xf)
+
         f_idx = int(np.argmin(np.abs(freqs - fund_hz)))
         f_idx = max(1, min(f_idx, len(mags) - 1))
         fund_power = mags[f_idx] ** 2
+        total_pow = float(np.sum(mags ** 2))
+
+        def _harmonic_power_upto(n_harm: int) -> float:
+            hp = 0.0
+            for h in range(2, n_harm + 2):
+                hf = fund_hz * h
+                if hf >= fs / 2.0:
+                    break
+                hi = int(np.argmin(np.abs(freqs - hf)))
+                hi = min(max(hi, 0), len(mags) - 1)
+                hp += mags[hi] ** 2
+            return hp
 
         if name == "Measure THD":
             n_harm = int(vals[1])
-            harm_power = 0.0
-            for h in range(2, n_harm + 2):
-                hf  = fund_hz * h
-                hi  = int(np.argmin(np.abs(freqs - hf)))
-                hi  = min(hi, len(mags) - 1)
-                harm_power += mags[hi] ** 2
+            harm_power = _harmonic_power_upto(n_harm)
             thd = 100.0 * math.sqrt(harm_power) / max(math.sqrt(fund_power), 1e-12)
             results["THD"] = f"{thd:.3f} %"
 
         elif name == "Measure SNR":
-            signal_pow  = fund_power
-            noise_pow   = max(np.sum(mags ** 2) - signal_pow, 1e-30)
-            snr         = 10.0 * math.log10(signal_pow / noise_pow)
+            harm_power = _harmonic_power_upto(9)
+            noise_pow = max(total_pow - fund_power - harm_power, 1e-30)
+            snr = 10.0 * math.log10(fund_power / noise_pow)
             results["SNR"] = f"{snr:.2f} dB"
 
         elif name == "Measure ENOB":
-            signal_pow  = fund_power
-            noise_pow   = max(np.sum(mags ** 2) - signal_pow, 1e-30)
-            snr         = 10.0 * math.log10(signal_pow / noise_pow)
-            sinad       = snr   # simplified - SINAD approx SNR for this approx
-            enob        = (sinad - 1.76) / 6.02
+            n_harm = int(vals[1])
+            harm_power = _harmonic_power_upto(n_harm - 1)
+            noise_pow = max(total_pow - fund_power - harm_power, 1e-30)
+            sinad = 10.0 * math.log10(fund_power / max(noise_pow, 1e-30))
+            enob = (sinad - 1.76) / 6.02
             results["SINAD"] = f"{sinad:.2f} dB"
-            results["ENOB"]  = f"{enob:.2f} bits"
+            results["ENOB"] = f"{enob:.2f} bits"
 
     def _update_result_table(self, results: Dict[str, str]):
         self._result_table.setRowCount(0)
