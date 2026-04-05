@@ -4,7 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>STM32 Lab - Mobile Interface</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        // Check if Paho MQTT is loaded
+        if (typeof Paho === 'undefined') {
+            console.error('Paho MQTT library not loaded');
+            updateConnectionStatus('MQTT Library Error');
+            addMessage('error', 'MQTT library failed to load. Please check your internet connection and try a different browser.');
+            // Disable connect button when library not available
+            const connectBtn = document.getElementById('connect-btn');
+            if (connectBtn) {
+                connectBtn.disabled = true;
+                connectBtn.textContent = 'MQTT Library Not Available';
+                connectBtn.className = 'btn btn-secondary';
+            }
+        } else {
+            console.log('Paho MQTT library loaded successfully');
+        }
+    </script>
     <style>
         :root {
             --BG_PRIMARY: #ffffff;
@@ -934,14 +952,20 @@
 
         function toggleConnection() {
             if (isConnected) {
-                disconnectWebSocket();
+                disconnectMQTT();
             } else {
-                connectWebSocket();
+                connectMQTT();
             }
         }
 
-        function connectWebSocket() {
+        function connectMQTT() {
             if (isConnected) return;
+
+            // Check if Paho MQTT is available
+            if (typeof Paho === 'undefined') {
+                addMessage('error', 'MQTT library not available. Please refresh the page.');
+                return;
+            }
 
             try {
                 // Get session ID from input
@@ -952,83 +976,88 @@
                     return;
                 }
                 
-                console.log('Connecting to WebSocket server with session:', sessionId);
+                console.log('Connecting to MQTT broker with session:', sessionId);
                 updateConnectionStatus('Connecting...');
                 
-                // Create WebSocket connection
-                socket = new WebSocket('wss://echo.websocket.org/');
+                // Create MQTT client (matching host application)
+                const brokerUrl = 'test.mosquitto.org:1883';
+                client = new Paho.MQTT.Client(brokerUrl, sessionId);
                 
-                socket.onopen = function() {
-                    isConnected = true;
-                    updateConnectionStatus('Connected');
-                    addMessage('received', `Connected with session: ${sessionId}`);
-                    
-                    // Send session ID to identify this client
-                    socket.send(JSON.stringify({
-                        type: 'session',
-                        session_id: sessionId
-                    }));
-                    
-                    // Show tab navigation
-                    document.getElementById('tab-nav').style.display = 'flex';
-                    
-                    // Send initial board ID request
-                    sendCommand('#ID;');
-                    
-                    console.log('WebSocket connected');
-                };
-                
-                socket.onmessage = function(event) {
-                    try {
-                        const data = JSON.parse(event.data);
-                        console.log('WebSocket message received:', data);
-                        handleWebSocketMessage(data);
-                    } catch (error) {
-                        console.error('Error parsing WebSocket message:', error);
-                    }
-                };
-                
-                socket.onclose = function() {
-                    if (isConnected) {
-                        console.log('WebSocket connection closed');
-                        updateConnectionStatus('Connection Lost');
-                        addMessage('received', 'Connection lost. Attempting to reconnect...');
-                        scheduleReconnect();
-                    }
-                };
-                
-                socket.onerror = function(error) {
-                    console.error('WebSocket error:', error);
-                    updateConnectionStatus('Connection Error');
-                    addMessage('error', 'Connection failed. Please check your internet connection and try again.');
+                client.onConnectionLost = function(responseObject) {
+                    console.log('Connection lost:', responseObject.errorMessage);
+                    updateConnectionStatus('Reconnecting...');
+                    isConnected = false;
                     scheduleReconnect();
                 };
+
+                client.onMessageArrived = function(message) {
+                    try {
+                        const payload = message.payloadString;
+                        console.log('MQTT message received:', payload);
+                        handleMQTTMessage(payload);
+                    } catch (error) {
+                        console.error('Error parsing MQTT message:', error);
+                    }
+                };
+
+                client.connect({
+                    onSuccess: function() {
+                        isConnected = true;
+                        updateConnectionStatus('Connected');
+                        addMessage('received', `Connected with session: ${sessionId}`);
+                        
+                        // Subscribe to command topic (matching host application)
+                        const topic = `stm32lab/${sessionId}/cmds`;
+                        client.subscribe(topic, 0);
+                        
+                        // Subscribe to data topic (matching host application)
+                        const dataTopic = `stm32lab/${sessionId}/data`;
+                        client.subscribe(dataTopic, 0);
+                        
+                        // Show tab navigation
+                        document.getElementById('tab-nav').style.display = 'flex';
+                        
+                        // Send initial board ID request
+                        sendCommand('#ID;');
+                        
+                        console.log('MQTT connected and subscribed to:', topic);
+                    },
+                    onFailure: function(responseObject) {
+                        console.error('MQTT connection failed:', responseObject.errorMessage);
+                        updateConnectionStatus('Connection Failed');
+                        addMessage('error', 'Connection failed: ' + responseObject.errorMessage);
+                    },
+                    useSSL: false,
+                    cleanSession: true,
+                    reconnectPeriod: 5,
+                    timeout: 10
+                });
                 
             } catch (error) {
-                console.error('Error creating WebSocket client:', error);
-                updateConnectionStatus('Connection Error');
-                addMessage('error', 'Connection failed. Please check your internet connection and try again.');
+                console.error('Error creating MQTT client:', error);
+                updateConnectionStatus('Error');
+                addMessage('error', 'MQTT client error: ' + error.message);
             }
         }
 
-        function disconnectWebSocket() {
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.close();
+        function disconnectMQTT() {
+            if (isConnected && client) {
+                isConnected = false;
+                client.disconnect();
+                updateConnectionStatus('Disconnected');
+                addMessage('received', 'Disconnected from session: ' + sessionId);
+                
+                // Hide tab navigation
+                document.getElementById('tab-nav').style.display = 'none';
+                
+                // Clear reconnect timer
+                if (reconnectTimer) {
+                    clearTimeout(reconnectTimer);
+                    reconnectTimer = null;
+                }
+                
+                console.log('MQTT disconnected');
             }
-            isConnected = false;
-            updateConnectionStatus('Disconnected');
-            addMessage('received', 'Disconnected from session: ' + sessionId);
-            
-            // Hide tab navigation
-            document.getElementById('tab-nav').style.display = 'none';
-            
-            // Clear reconnect timer
-            if (reconnectTimer) {
-                clearTimeout(reconnectTimer);
-                reconnectTimer = null;
-            }
-            
-            console.log('WebSocket disconnected');
         }
 
         function scheduleReconnect() {
@@ -1037,7 +1066,7 @@
             reconnectTimer = setTimeout(function() {
                 if (!isConnected && document.getElementById('session-id').value.trim().length === 6) {
                     console.log('Attempting to reconnect...');
-                    connectWebSocket();
+                    connectMQTT();
                 }
             }, 5000);
         }
@@ -1049,11 +1078,9 @@
             }
             
             try {
-                socket.send(JSON.stringify({
-                    type: 'command',
-                    command: command,
-                    session_id: sessionId
-                }));
+                const message = new Paho.MQTT.Message(command);
+                message.destinationName = `stm32lab/${sessionId}/cmds`;
+                client.send(message);
                 console.log('Command sent:', command);
                 addMessage('sent', command);
             } catch (error) {
@@ -1094,27 +1121,36 @@
             sendCommand(`#WAVE:F=${freq}`);
         }
 
-        function handleWebSocketMessage(data) {
+        function handleMQTTMessage(payload) {
             try {
-                const msg = data;
-                console.log('Processing WebSocket message:', msg);
+                const msg = payload.trim();
+                console.log('Processing MQTT message:', msg);
 
                 // Parse different message types
-                if (msg.type === 'command_response') {
-                    addMessage('received', `Response: ${msg.response}`);
-                    
-                    // Parse command responses
-                    if (msg.command === '#ID;') {
-                        if (msg.response && msg.response.includes('STM32')) {
-                            addMessage('received', 'Board ID: ' + msg.response);
-                        }
-                    }
-                } else if (msg.type === 'data') {
+                if (msg.startsWith('#DATA:')) {
                     handleDataMessage(msg);
-                } else if (msg.type === 'error') {
-                    addMessage('error', 'Error: ' + msg.message);
-                } else if (msg.type === 'status') {
-                    handleStatusMessage(msg);
+                } else if (msg.startsWith('#DSO:')) {
+                    handleDSOMessage(msg);
+                } else if (msg.startsWith('#MM:')) {
+                    handleMultimeterMessage(msg);
+                } else if (msg.startsWith('#WAVE:')) {
+                    handleFunctionGeneratorMessage(msg);
+                } else if (msg.startsWith('#PID:')) {
+                    handlePIDMessage(msg);
+                } else if (msg.startsWith('#RANGE:')) {
+                    handleRangeMessage(msg);
+                } else if (msg.startsWith('#TIME:')) {
+                    handleTimebaseMessage(msg);
+                } else if (msg.startsWith('#TRIG:')) {
+                    handleTriggerMessage(msg);
+                } else if (msg.startsWith('#VREG:')) {
+                    handleVRegulatorMessage(msg);
+                } else if (msg.startsWith('#TEMP:')) {
+                    handleTemperatureMessage(msg);
+                } else if (msg.startsWith('#ID:')) {
+                    addMessage('received', 'Board ID: ' + msg.substring(4));
+                } else {
+                    addMessage('received', msg);
                 }
             } catch (error) {
                 console.error('Error handling message:', error);
@@ -1122,35 +1158,151 @@
         }
 
         function handleDataMessage(msg) {
-            if (msg.data && msg.data.voltmeter) {
-                updateVoltmeterData(msg.data.voltmeter);
-            }
-            if (msg.data && msg.data.ammeter) {
-                updateAmmeterData(msg.data.ammeter);
-            }
-            if (msg.data && msg.data.dso) {
-                updateDSOData(msg.data.dso);
+            const match = msg.match(/#DATA:M=([A-VDGR]),X=([\d.-]+)/);
+            if (match) {
+                const mode = match[1];
+                const value = parseFloat(match[2]);
+                
+                // Update displays based on mode
+                if (mode === 'V') {
+                    updateVoltmeterData(value);
+                } else if (mode === 'A') {
+                    updateAmmeterData(value);
+                } else if (mode === 'D') {
+                    updateDSOData(value);
+                }
             }
         }
 
-        function handleStatusMessage(msg) {
-            if (msg.voltmeter) {
-                updateVoltmeterData(msg.voltmeter);
+        function handleDSOMessage(msg) {
+            const samples = msg.substring(5).split(',').map(parseFloat);
+            if (samples.length > 0) {
+                updateDSOData(samples);
+                updateDSOStats(samples);
             }
-            if (msg.ammeter) {
-                updateAmmeterData(msg.ammeter);
+        }
+
+        function handleMultimeterMessage(msg) {
+            const match = msg.match(/#DATA:M=([A-VDRG]),X=([\d.-]+)/);
+            if (match) {
+                const value = parseFloat(match[2]);
+                updateMultimeterValue(value);
             }
-            if (msg.function_generator) {
-                updateFunctionGeneratorStatus(msg.function_generator);
+        }
+
+        function handleFunctionGeneratorMessage(msg) {
+            // Parse frequency
+            const freqMatch = msg.match(/#WAVE:F=([\d.]+)/);
+            if (freqMatch) {
+                const freq = parseFloat(freqMatch[1]);
+                updateFunctionGeneratorStatus('frequency', freq);
             }
-            if (msg.power_control) {
-                updatePowerControlStatus(msg.power_control);
+
+            // Parse waveform
+            if (msg.includes('SQ')) {
+                updateFunctionGeneratorStatus('waveform', 'Square');
+            } else if (msg.includes('SI')) {
+                updateFunctionGeneratorStatus('waveform', 'Sine');
+            } else if (msg.includes('TR')) {
+                updateFunctionGeneratorStatus('waveform', 'Triangle');
             }
-            if (msg.dso) {
-                updateDSOStatus(msg.dso);
+
+            // Parse amplitude
+            const ampMatch = msg.match(/#WAVE:PARAMS ([\d.-]+),/);
+            if (ampMatch) {
+                const amplitude = parseFloat(ampMatch[1]);
+                updateFunctionGeneratorStatus('amplitude', amplitude);
             }
-            if (msg.pid) {
-                updatePIDStatus(msg.pid);
+
+            // Parse status
+            if (msg.includes('ON')) {
+                updateFunctionGeneratorStatus('status', 'ON');
+            } else if (msg.includes('OFF')) {
+                updateFunctionGeneratorStatus('status', 'OFF');
+            }
+        }
+
+        function handlePIDMessage(msg) {
+            // Parse PID data
+            const pvMatch = msg.match(/#PID:PV=([\d.]+)/);
+            if (pvMatch) {
+                const pv = parseFloat(pvMatch[1]);
+                updatePIDStatus('pv', pv);
+            }
+
+            const spMatch = msg.match(/#PID:SP=([\d.]+)/);
+            if (spMatch) {
+                const sp = parseFloat(spMatch[1]);
+                updatePIDStatus('sp', sp);
+            }
+
+            const outputMatch = msg.match(/#PID:O=([\d.]+)/);
+            if (outputMatch) {
+                const output = parseFloat(outputMatch[1]);
+                updatePIDStatus('output', output);
+            }
+
+            const errorMatch = msg.match(/#PID:E=([\d.-]+)/);
+            if (errorMatch) {
+                const error = parseFloat(errorMatch[1]);
+                updatePIDStatus('error', error);
+            }
+        }
+
+        function handleRangeMessage(msg) {
+            const match = msg.match(/#RANGE:([A-V])=([\d.]+)/);
+            if (match) {
+                const rangeType = match[1];
+                const rangeValue = parseFloat(match[2]);
+                
+                if (rangeType === 'V') {
+                    document.getElementById('voltmeter-value').textContent = rangeValue.toFixed(3);
+                    addMessage('received', `Voltmeter range set to ${rangeValue}V`);
+                } else if (rangeType === 'A') {
+                    document.getElementById('ammeter-value').textContent = rangeValue.toFixed(3);
+                    document.getElementById('ammeter-unit').textContent = 'mA';
+                    addMessage('received', `Ammeter range set to ${rangeValue}mA`);
+                }
+            }
+        }
+
+        function handleTimebaseMessage(msg) {
+            const match = msg.match(/#TIME:([\d.]+)ms/);
+            if (match) {
+                const timebase = parseFloat(match[1]);
+                document.getElementById('dso-timebase').textContent = timebase + 'ms';
+                addMessage('received', `DSO timebase set to ${timebase}ms`);
+            }
+        }
+
+        function handleTriggerMessage(msg) {
+            if (msg.includes('AUTO')) {
+                updateTriggerStatus('mode', 'AUTO');
+            } else if (msg.includes('NORMAL')) {
+                updateTriggerStatus('mode', 'NORMAL');
+            } else if (msg.includes('SINGLE')) {
+                updateTriggerStatus('mode', 'SINGLE');
+            } else if (msg.includes('LEVEL=')) {
+                const levelMatch = msg.match(/#TRIG:LEVEL=([\d.]+)/);
+                if (levelMatch) {
+                    updateTriggerStatus('level', parseFloat(levelMatch[1]));
+                }
+            }
+        }
+
+        function handleVRegulatorMessage(msg) {
+            if (msg.includes('ON')) {
+                updateVRegulatorStatus('status', 'ON');
+            } else if (msg.includes('OFF')) {
+                updateVRegulatorStatus('status', 'OFF');
+            }
+        }
+
+        function handleTemperatureMessage(msg) {
+            const match = msg.match(/#TEMP:T=([\d.-]+)/);
+            if (match) {
+                const temp = parseFloat(match[1]);
+                updateTemperatureStatus('value', temp);
             }
         }
 
@@ -1218,61 +1370,55 @@
             }
         }
 
-        function updateFunctionGeneratorStatus(data) {
-            if (data.waveform) {
-                document.getElementById('waveform-status').textContent = data.waveform;
-            }
-            if (data.frequency) {
-                document.getElementById('waveform-frequency').textContent = formatFrequency(data.frequency);
-            }
-            if (data.amplitude !== undefined) {
-                document.getElementById('waveform-amplitude').textContent = data.amplitude + 'V';
-            }
-            if (data.status) {
-                document.getElementById('waveform-status').textContent = data.status;
+        function updateFunctionGeneratorStatus(type, value) {
+            if (type === 'waveform') {
+                document.getElementById('waveform-status').textContent = value;
+            } else if (type === 'frequency') {
+                document.getElementById('waveform-frequency').textContent = formatFrequency(value);
+            } else if (type === 'amplitude') {
+                document.getElementById('waveform-amplitude').textContent = value + 'V';
+            } else if (type === 'status') {
+                document.getElementById('waveform-status').textContent = value;
             }
         }
 
-        function updatePowerControlStatus(data) {
-            if (data.vregulator) {
-                document.getElementById('vreg-status').textContent = data.vregulator;
-            }
-            if (data.boost) {
-                document.getElementById('boost-status').textContent = data.boost;
-            }
-            if (data.vregulator_set) {
-                document.getElementById('vreg-set').textContent = data.vregulator_set + 'V';
-            }
-            if (data.boost_set) {
-                document.getElementById('boost-set').textContent = data.boost_set + '%';
+        function updateTriggerStatus(type, value) {
+            if (type === 'mode') {
+                document.getElementById('dso-mode').textContent = value;
+            } else if (type === 'level') {
+                document.getElementById('dso-trigger').textContent = value + 'V';
             }
         }
 
-        function updateDSOStatus(data) {
-            if (data.mode) {
-                document.getElementById('dso-mode').textContent = data.mode;
-            }
-            if (data.trigger) {
-                document.getElementById('dso-trigger').textContent = data.trigger;
-            }
-            if (data.timebase) {
-                document.getElementById('dso-timebase').textContent = data.timebase + 'ms';
+        function updateVRegulatorStatus(type, value) {
+            if (type === 'status') {
+                document.getElementById('vreg-status').textContent = value;
             }
         }
 
-        function updatePIDStatus(data) {
-            if (data.pv !== undefined) {
-                document.getElementById('pid-pv').textContent = data.pv.toFixed(3);
+        function updateTemperatureStatus(type, value) {
+            if (type === 'value') {
+                // Add temperature display if needed
+                console.log('Temperature:', value);
             }
-            if (data.sp !== undefined) {
-                document.getElementById('pid-sp').textContent = data.sp.toFixed(3);
+        }
+
+        function updatePIDStatus(type, value) {
+            if (type === 'pv') {
+                document.getElementById('pid-pv').textContent = value.toFixed(3);
+            } else if (type === 'sp') {
+                document.getElementById('pid-sp').textContent = value.toFixed(3);
+            } else if (type === 'output') {
+                document.getElementById('pid-output').textContent = value.toFixed(3);
+            } else if (type === 'error') {
+                document.getElementById('pid-error').textContent = value.toFixed(3);
             }
-            if (data.output !== undefined) {
-                document.getElementById('pid-output').textContent = data.output.toFixed(3);
-            }
-            if (data.error !== undefined) {
-                document.getElementById('pid-error').textContent = data.error.toFixed(3);
-            }
+        }
+
+        function updateMultimeterValue(value) {
+            // Update based on current mode
+            const valueNum = parseFloat(value);
+            document.getElementById('voltmeter-value').textContent = valueNum.toFixed(3);
         }
 
         function updateConnectionStatus(status) {
