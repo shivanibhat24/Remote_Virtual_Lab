@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STM32 Remote Laboratory v6.0 - Advanced Interface</title>
+    <title>STM32 Remote Laboratory v6.0 - Professional Interface</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Advanced CSS with stunning visuals and animations */
+        /* Professional CSS with clean design */
         :root {
             /* Dark Theme (Default) */
             --DARK_BG: #080c10;
@@ -29,7 +28,7 @@
             --FONT_UI: 'Inter', 'Segoe UI', Roboto, sans-serif;
             --FONT_MONO: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
             
-            /* Advanced gradients */
+            /* Gradients */
             --GRADIENT_PRIMARY: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
             --GRADIENT_BLUE: linear-gradient(135deg, #00b4ff 0%, #0080cc 100%);
             --GRADIENT_AMBER: linear-gradient(135deg, #ffaa00 0%, #ff8800 100%);
@@ -62,13 +61,6 @@
             --TEXT: #e0c8ff;
             --TEXT_MUTED: #5a3a7a;
             --TEXT_DIM: #2a1a3a;
-            
-            --GRADIENT_PRIMARY: linear-gradient(135deg, #00ffcc 0%, #00ccaa 100%);
-            --GRADIENT_BLUE: linear-gradient(135deg, #ff00ff 0%, #cc00cc 100%);
-            --GRADIENT_AMBER: linear-gradient(135deg, #ffee00 0%, #ccbb00 100%);
-            --GRADIENT_RED: linear-gradient(135deg, #ff0055 0%, #cc0033 100%);
-            --GRADIENT_PUR: linear-gradient(135deg, #cc44ff 0%, #9933cc 100%);
-            --GRADIENT_CYAN: linear-gradient(135deg, #00eeff 0%, #00bbcc 100%);
         }
 
         /* Matrix Theme */
@@ -87,13 +79,6 @@
             --TEXT: #00ff00;
             --TEXT_MUTED: #00cc00;
             --TEXT_DIM: #008800;
-            
-            --GRADIENT_PRIMARY: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
-            --GRADIENT_BLUE: linear-gradient(135deg, #00ff88 0%, #00cc66 100%);
-            --GRADIENT_AMBER: linear-gradient(135deg, #88ff00 0%, #66cc00 100%);
-            --GRADIENT_RED: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
-            --GRADIENT_PUR: linear-gradient(135deg, #ff00ff 0%, #cc00cc 100%);
-            --GRADIENT_CYAN: linear-gradient(135deg, #00ffff 0%, #00cccc 100%);
         }
 
         /* Neon Theme */
@@ -112,13 +97,6 @@
             --TEXT: #ffffff;
             --TEXT_MUTED: #ff66ff;
             --TEXT_DIM: #9933cc;
-            
-            --GRADIENT_PRIMARY: linear-gradient(135deg, #ff00ff 0%, #cc00cc 100%);
-            --GRADIENT_BLUE: linear-gradient(135deg, #00ffff 0%, #00cccc 100%);
-            --GRADIENT_AMBER: linear-gradient(135deg, #ffff00 0%, #cccc00 100%);
-            --GRADIENT_RED: linear-gradient(135deg, #ff0066 0%, #cc0044 100%);
-            --GRADIENT_PUR: linear-gradient(135deg, #ff00ff 0%, #cc00cc 100%);
-            --GRADIENT_CYAN: linear-gradient(135deg, #00ffff 0%, #00cccc 100%);
         }
 
         /* Base Styles */
@@ -140,22 +118,6 @@
             position: relative;
         }
 
-        /* Animated background */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: 
-                radial-gradient(circle at 20% 50%, rgba(0, 255, 136, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(0, 180, 255, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 40% 20%, rgba(170, 85, 255, 0.1) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
         /* Main Window */
         .main-window {
             background: rgba(var(--DARK_BG), 0.95);
@@ -167,7 +129,7 @@
             z-index: 1;
         }
 
-        /* Animated Header */
+        /* Header */
         .header {
             background: linear-gradient(135deg, var(--PANEL_BG) 0%, rgba(var(--CARD_BG), 0.8) 100%);
             border-bottom: 2px solid var(--BORDER);
@@ -177,22 +139,6 @@
             align-items: center;
             position: relative;
             overflow: hidden;
-        }
-
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(var(--PRIMARY), 0.3), transparent);
-            animation: slideHeader 3s infinite;
-        }
-
-        @keyframes slideHeader {
-            0% { left: -100%; }
-            100% { left: 100%; }
         }
 
         .app-title {
@@ -215,7 +161,7 @@
             z-index: 2;
         }
 
-        /* Advanced Status Bar */
+        /* Status Bar */
         .status-bar {
             background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
             border-top: 2px solid var(--BORDER);
@@ -266,7 +212,7 @@
             50% { transform: scale(1.2); opacity: 0.8; }
         }
 
-        /* Advanced Tab System */
+        /* Tab System */
         .tab-container {
             flex: 1;
             display: flex;
@@ -283,18 +229,6 @@
             overflow: hidden;
         }
 
-        .tab-bar::before {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: var(--GRADIENT_PRIMARY);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-
         .tab {
             background: transparent;
             color: var(--TEXT_MUTED);
@@ -309,21 +243,6 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             overflow: hidden;
-        }
-
-        .tab::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(var(--PRIMARY), 0.2), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .tab:hover::before {
-            left: 100%;
         }
 
         .tab:hover {
@@ -358,7 +277,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Advanced Cards */
+        /* Cards */
         .card {
             background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
             border: 1px solid var(--BORDER);
@@ -406,7 +325,7 @@
             position: relative;
         }
 
-        /* Advanced Buttons */
+        /* Buttons */
         .btn {
             background: transparent;
             color: var(--PRIMARY);
@@ -508,7 +427,7 @@
             box-shadow: var(--GLOW_CYAN);
         }
 
-        /* Advanced Form Controls */
+        /* Form Controls */
         .input, .select {
             background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
             color: var(--TEXT);
@@ -528,7 +447,7 @@
             transform: translateY(-2px);
         }
 
-        /* Advanced Grid Layouts */
+        /* Grid Layouts */
         .grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -585,7 +504,7 @@
             justify-content: center;
         }
 
-        /* Advanced Charts */
+        /* Charts */
         .chart-container {
             background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
             border: 2px solid var(--BORDER);
@@ -614,7 +533,7 @@
             50% { opacity: 1; }
         }
 
-        /* Advanced Protocol Grid */
+        /* Protocol Grid */
         .protocol-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
@@ -673,7 +592,7 @@
             transform: translateY(-3px);
         }
 
-        /* Advanced Log Area */
+        /* Log Area */
         .log-area {
             background: linear-gradient(135deg, var(--DARK_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
             border: 2px solid var(--BORDER);
@@ -733,7 +652,7 @@
             border-left: 3px solid var(--ACCENT_AMBER);
         }
 
-        /* Advanced Notes Section */
+        /* Notes Section */
         .notes-area {
             background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
             border: 2px solid var(--BORDER);
@@ -761,7 +680,7 @@
             flex-wrap: wrap;
         }
 
-        /* Advanced Statistics Display */
+        /* Statistics Display */
         .stat-display {
             background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
             border: 2px solid var(--BORDER);
@@ -832,7 +751,7 @@
             text-shadow: var(--GLOW_AMBER);
         }
 
-        /* Advanced Connection Panel */
+        /* Connection Panel */
         .auth-panel {
             background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.9) 100%);
             border: 2px solid var(--BORDER);
@@ -888,7 +807,7 @@
             z-index: 2;
         }
 
-        /* Advanced Theme Selector */
+        /* Theme Selector */
         .theme-selector {
             position: fixed;
             top: 20px;
@@ -918,33 +837,7 @@
             box-shadow: var(--GLOW_PRIMARY);
         }
 
-        /* Advanced Floating Elements */
-        .floating-particles {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .particle {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: var(--PRIMARY);
-            border-radius: 50%;
-            opacity: 0.3;
-            animation: float 10s infinite linear;
-        }
-
-        @keyframes float {
-            0% { transform: translateY(100vh) rotate(0deg); }
-            100% { transform: translateY(-100px) rotate(360deg); }
-        }
-
-        /* Advanced Responsive Design */
+        /* Responsive Design */
         @media (max-width: 768px) {
             .grid-4 {
                 grid-template-columns: 1fr 1fr;
@@ -973,7 +866,7 @@
             }
         }
 
-        /* Loading Animation */
+        /* Utility Classes */
         .loading {
             display: inline-block;
             width: 20px;
@@ -989,17 +882,14 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Pulse Animation */
         .pulse {
             animation: pulse 2s infinite;
         }
 
-        /* Glow Animation */
         .glow {
             box-shadow: var(--GLOW_PRIMARY);
         }
 
-        /* Shake Animation */
         .shake {
             animation: shake 0.5s;
         }
@@ -1012,9 +902,6 @@
     </style>
 </head>
 <body data-theme="dark">
-    <!-- Floating Particles -->
-    <div class="floating-particles" id="particles"></div>
-
     <!-- Theme Selector -->
     <div class="theme-selector">
         <select class="theme-select" onchange="changeTheme(this.value)">
@@ -1026,7 +913,7 @@
     </div>
 
     <div class="main-window">
-        <!-- Animated Header -->
+        <!-- Header -->
         <div class="header">
             <div class="app-title">STM32 Remote Laboratory v6.0</div>
             <div class="header-controls">
@@ -1040,13 +927,13 @@
 
         <!-- Connection Panel -->
         <div class="auth-panel" id="auth-panel" style="display: none;">
-            <div class="auth-title">🚀 Remote Connection Portal</div>
+            <div class="auth-title">Remote Connection Portal</div>
             <p style="color: var(--TEXT_MUTED); margin-bottom: 25px;">Enter 6-character Session ID from Host GUI</p>
             <input type="text" class="input auth-input" id="session-id" placeholder="X9T4K2" maxlength="6">
             <br>
             <div class="flex gap-15 justify-center">
-                <button class="btn" onclick="connect_cloud()">🔗 Connect to Cloud</button>
-                <button class="btn btn-red" onclick="hideAuthPanel()">❌ Cancel</button>
+                <button class="btn" onclick="connect_cloud()">Connect to Cloud</button>
+                <button class="btn btn-red" onclick="hideAuthPanel()">Cancel</button>
             </div>
         </div>
 
@@ -1054,14 +941,14 @@
         <div class="tab-container">
             <!-- Tab Bar -->
             <div class="tab-bar">
-                <div class="tab active" onclick="switchTab('oscilloscope')">📊 Oscilloscope</div>
-                <div class="tab" onclick="switchTab('multimeter')">⚡ Multimeter</div>
-                <div class="tab" onclick="switchTab('function-gen')">🎵 Function Gen</div>
-                <div class="tab" onclick="switchTab('protocol')">🔌 Protocol</div>
-                <div class="tab" onclick="switchTab('pid')">🎛️ PID Control</div>
-                <div class="tab" onclick="switchTab('notes')">📝 Notes</div>
-                <div class="tab" onclick="switchTab('advanced')">⚙️ Advanced</div>
-                <div class="tab" onclick="switchTab('analytics')">📈 Analytics</div>
+                <div class="tab active" onclick="switchTab('oscilloscope')">Oscilloscope</div>
+                <div class="tab" onclick="switchTab('multimeter')">Multimeter</div>
+                <div class="tab" onclick="switchTab('function-gen')">Function Gen</div>
+                <div class="tab" onclick="switchTab('protocol')">Protocol</div>
+                <div class="tab" onclick="switchTab('pid')">PID Control</div>
+                <div class="tab" onclick="switchTab('notes')">Notes</div>
+                <div class="tab" onclick="switchTab('advanced')">Advanced</div>
+                <div class="tab" onclick="switchTab('analytics')">Analytics</div>
             </div>
 
             <!-- Tab Contents -->
@@ -1103,18 +990,18 @@
                     <div class="card">
                         <div class="card-title">Measurement Mode</div>
                         <div class="grid-2">
-                            <button class="btn" onclick="sendCommand('#MM:MODE V')">⚡ DC Voltage</button>
-                            <button class="btn" onclick="sendCommand('#MM:MODE A')">🔌 DC Current</button>
-                            <button class="btn" onclick="sendCommand('#MM:MODE R')">📏 Resistance</button>
-                            <button class="btn" onclick="sendCommand('#MM:MODE F')">📊 Frequency</button>
-                            <button class="btn btn-blue" onclick="sendCommand('#MM:MODE AC')">🌊 AC Voltage</button>
-                            <button class="btn btn-purple" onclick="sendCommand('#MM:MODE CAP')">🔋 Capacitance</button>
+                            <button class="btn" onclick="sendCommand('#MM:MODE V')">DC Voltage</button>
+                            <button class="btn" onclick="sendCommand('#MM:MODE A')">DC Current</button>
+                            <button class="btn" onclick="sendCommand('#MM:MODE R')">Resistance</button>
+                            <button class="btn" onclick="sendCommand('#MM:MODE F')">Frequency</button>
+                            <button class="btn btn-blue" onclick="sendCommand('#MM:MODE AC')">AC Voltage</button>
+                            <button class="btn btn-purple" onclick="sendCommand('#MM:MODE CAP')">Capacitance</button>
                         </div>
                     </div>
                     <div class="card">
                         <div class="card-title">Range Control</div>
                         <div class="grid-2">
-                            <button class="btn" onclick="sendCommand('#MM:RANGE AUTO')">🔄 Auto Range</button>
+                            <button class="btn" onclick="sendCommand('#MM:RANGE AUTO')">Auto Range</button>
                             <button class="btn" onclick="sendCommand('#MM:RANGE 5V')">5V Range</button>
                             <button class="btn" onclick="sendCommand('#MM:RANGE 12V')">12V Range</button>
                             <button class="btn" onclick="sendCommand('#MM:RANGE 24V')">24V Range</button>
@@ -1142,12 +1029,12 @@
                     <div class="card">
                         <div class="card-title">Waveform Type</div>
                         <div class="grid-3">
-                            <button class="btn btn-blue" onclick="sendCommand('#FG:WAVE:SQ')">📦 Square</button>
-                            <button class="btn btn-purple" onclick="sendCommand('#FG:WAVE:SI')">〰️ Sine</button>
-                            <button class="btn btn-amber" onclick="sendCommand('#FG:WAVE:TR')">📐 Triangle</button>
-                            <button class="btn btn-cyan" onclick="sendCommand('#FG:WAVE:SAW')">📈 Sawtooth</button>
-                            <button class="btn" onclick="sendCommand('#FG:WAVE:NOISE')">🔊 Noise</button>
-                            <button class="btn" onclick="sendCommand('#FG:WAVE:DC')">➡️ DC</button>
+                            <button class="btn btn-blue" onclick="sendCommand('#FG:WAVE:SQ')">Square</button>
+                            <button class="btn btn-purple" onclick="sendCommand('#FG:WAVE:SI')">Sine</button>
+                            <button class="btn btn-amber" onclick="sendCommand('#FG:WAVE:TR')">Triangle</button>
+                            <button class="btn btn-cyan" onclick="sendCommand('#FG:WAVE:SAW')">Sawtooth</button>
+                            <button class="btn" onclick="sendCommand('#FG:WAVE:NOISE')">Noise</button>
+                            <button class="btn" onclick="sendCommand('#FG:WAVE:DC')">DC</button>
                         </div>
                     </div>
                     <div class="card">
@@ -1176,9 +1063,9 @@
                             </div>
                         </div>
                         <div class="flex gap-10" style="margin-top: 15px;">
-                            <button class="btn btn-amber" onclick="updateFGParams()">⚙️ Update</button>
-                            <button class="btn btn-cyan" onclick="sendCommand('#FG:OUTPUT ON')">▶️ Output ON</button>
-                            <button class="btn btn-red" onclick="sendCommand('#FG:OUTPUT OFF')">⏹️ Output OFF</button>
+                            <button class="btn btn-amber" onclick="updateFGParams()">Update</button>
+                            <button class="btn btn-cyan" onclick="sendCommand('#FG:OUTPUT ON')">Output ON</button>
+                            <button class="btn btn-red" onclick="sendCommand('#FG:OUTPUT OFF')">Output OFF</button>
                         </div>
                     </div>
                     <div class="card">
@@ -1258,10 +1145,10 @@
                             </div>
                         </div>
                         <div class="flex gap-10" style="margin-top: 20px;">
-                            <button class="btn btn-purple" onclick="sendPIDParams()">⚙️ Update PID</button>
-                            <button class="btn btn-amber" onclick="sendCommand('#PID:START')">▶️ Start</button>
-                            <button class="btn btn-red" onclick="sendCommand('#PID:STOP')">⏹️ Stop</button>
-                            <button class="btn btn-blue" onclick="sendCommand('#PID:RESET')">🔄 Reset</button>
+                            <button class="btn btn-purple" onclick="sendPIDParams()">Update PID</button>
+                            <button class="btn btn-amber" onclick="sendCommand('#PID:START')">Start</button>
+                            <button class="btn btn-red" onclick="sendCommand('#PID:STOP')">Stop</button>
+                            <button class="btn btn-blue" onclick="sendCommand('#PID:RESET')">Reset</button>
                         </div>
                     </div>
                     <div class="card">
@@ -1300,18 +1187,18 @@
             <div id="notes" class="tab-content">
                 <div class="grid-2">
                     <div class="card">
-                        <div class="card-title">📝 Experiment Notes</div>
+                        <div class="card-title">Experiment Notes</div>
                         <textarea class="notes-area" id="notes-area" placeholder="Enter your experiment notes here..."></textarea>
                         <div class="notes-controls">
-                            <button class="btn" onclick="saveNotes()">💾 Save</button>
-                            <button class="btn btn-blue" onclick="shareNotes()">🌐 Share</button>
-                            <button class="btn btn-amber" onclick="loadNotes()">📂 Load</button>
-                            <button class="btn btn-purple" onclick="exportNotes()">📤 Export</button>
-                            <button class="btn btn-red" onclick="clearNotes()">🗑️ Clear</button>
+                            <button class="btn" onclick="saveNotes()">Save</button>
+                            <button class="btn btn-blue" onclick="shareNotes()">Share</button>
+                            <button class="btn btn-amber" onclick="loadNotes()">Load</button>
+                            <button class="btn btn-purple" onclick="exportNotes()">Export</button>
+                            <button class="btn btn-red" onclick="clearNotes()">Clear</button>
                         </div>
                     </div>
                     <div class="card">
-                        <div class="card-title">🌐 Shared Notes</div>
+                        <div class="card-title">Shared Notes</div>
                         <div id="shared-notes" style="max-height: 300px; overflow-y: auto; font-family: var(--FONT_MONO); font-size: 12px; color: var(--TEXT_MUTED);">
                             No shared notes available...
                         </div>
@@ -1322,7 +1209,7 @@
             <div id="advanced" class="tab-content">
                 <div class="grid-2">
                     <div class="card">
-                        <div class="card-title">🔧 System Configuration</div>
+                        <div class="card-title">System Configuration</div>
                         <div class="grid-2 gap-15">
                             <div>
                                 <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Sample Rate</label>
@@ -1356,13 +1243,13 @@
                             </div>
                         </div>
                         <div class="flex gap-10" style="margin-top: 20px;">
-                            <button class="btn btn-purple" onclick="updateSystemConfig()">⚙️ Apply</button>
-                            <button class="btn btn-blue" onclick="sendCommand('#SYS:RESET')">🔄 Reset System</button>
-                            <button class="btn btn-amber" onclick="sendCommand('#SYS:CALIBRATE')">🎯 Calibrate</button>
+                            <button class="btn btn-purple" onclick="updateSystemConfig()">Apply</button>
+                            <button class="btn btn-blue" onclick="sendCommand('#SYS:RESET')">Reset System</button>
+                            <button class="btn btn-amber" onclick="sendCommand('#SYS:CALIBRATE')">Calibrate</button>
                         </div>
                     </div>
                     <div class="card">
-                        <div class="card-title">📊 System Information</div>
+                        <div class="card-title">System Information</div>
                         <div class="grid-2">
                             <div class="stat-display">
                                 <div class="stat-label">CPU Usage</div>
@@ -1386,14 +1273,14 @@
                     </div>
                 </div>
                 <div class="card">
-                    <div class="card-title">🔍 Debug Console</div>
+                    <div class="card-title">Debug Console</div>
                     <div class="log-area" id="debug-console">
                         Debug console ready...
                     </div>
                     <div class="flex gap-10" style="margin-top: 10px;">
-                        <button class="btn btn-blue" onclick="clearDebugConsole()">🗑️ Clear</button>
-                        <button class="btn btn-amber" onclick="exportDebugLog()">📤 Export Log</button>
-                        <button class="btn btn-purple" onclick="toggleDebugMode()">🔧 Debug Mode</button>
+                        <button class="btn btn-blue" onclick="clearDebugConsole()">Clear</button>
+                        <button class="btn btn-amber" onclick="exportDebugLog()">Export Log</button>
+                        <button class="btn btn-purple" onclick="toggleDebugMode()">Debug Mode</button>
                     </div>
                 </div>
             </div>
@@ -1401,13 +1288,13 @@
             <div id="analytics" class="tab-content">
                 <div class="grid-2">
                     <div class="card">
-                        <div class="card-title">📈 Real-time Analytics</div>
+                        <div class="card-title">Real-time Analytics</div>
                         <div class="chart-container" style="height: 300px;">
                             <canvas id="analyticsChart"></canvas>
                         </div>
                     </div>
                     <div class="card">
-                        <div class="card-title">📊 Performance Metrics</div>
+                        <div class="card-title">Performance Metrics</div>
                         <div class="grid-2">
                             <div class="stat-display">
                                 <div class="stat-label">Data Rate</div>
@@ -1431,7 +1318,7 @@
                     </div>
                 </div>
                 <div class="card">
-                    <div class="card-title">📋 Session History</div>
+                    <div class="card-title">Session History</div>
                     <div id="session-history" style="font-family: var(--FONT_MONO); font-size: 12px; color: var(--TEXT_MUTED); max-height: 200px; overflow-y: auto;">
                         No session history available...
                     </div>
@@ -1439,16 +1326,16 @@
             </div>
         </div>
 
-        <!-- Advanced Status Bar -->
+        <!-- Status Bar -->
         <div class="status-bar">
             <div>
                 <span id="session-info">No Session</span>
-                <span style="margin-left: 20px;">📡 Signal: <span id="signal-strength">Strong</span></span>
-                <span style="margin-left: 20px;">🌐 Network: <span id="network-status">Online</span></span>
+                <span style="margin-left: 20px;">Signal: <span id="signal-strength">Strong</span></span>
+                <span style="margin-left: 20px;">Network: <span id="network-status">Online</span></span>
             </div>
             <div>
                 <span id="timestamp">--:--:--</span>
-                <span style="margin-left: 20px;">⚡ FPS: <span id="fps">60</span></span>
+                <span style="margin-left: 20px;">FPS: <span id="fps">60</span></span>
             </div>
         </div>
     </div>
@@ -1469,18 +1356,15 @@
         document.addEventListener('DOMContentLoaded', function() {
             initCharts();
             initProtocolGrid();
-            initParticles();
             updateTimestamp();
             setInterval(updateTimestamp, 1000);
             loadLocalNotes();
-            initAnimations();
         });
 
         // Theme management
         function changeTheme(theme) {
             document.body.setAttribute('data-theme', theme);
             localStorage.setItem('stm32-lab-theme', theme);
-            updateParticles();
         }
 
         // Load saved theme
@@ -1502,27 +1386,21 @@
             document.getElementById(tabName).classList.add('active');
             event.target.classList.add('active');
             currentTab = tabName;
-            
-            // Animate tab change
-            gsap.from(`#${tabName}`, {duration: 0.5, y: 20, opacity: 0, ease: "power2.out"});
         }
 
         // Connection management
         function showAuthPanel() {
             document.getElementById('auth-panel').style.display = 'block';
-            gsap.from('#auth-panel', {duration: 0.5, scale: 0.8, opacity: 0, ease: "back.out(1.7)"});
         }
 
         function hideAuthPanel() {
-            gsap.to('#auth-panel', {duration: 0.3, scale: 0.8, opacity: 0, ease: "power2.in", onComplete: () => {
-                document.getElementById('auth-panel').style.display = 'none';
-            }});
+            document.getElementById('auth-panel').style.display = 'none';
         }
 
         function connect_cloud() {
             const sid = document.getElementById("session-id").value.toUpperCase().trim();
             if (sid.length !== 6) {
-                showNotification("Invalid Session ID. Must be 6 characters.", 'error');
+                alert("Invalid Session ID. Must be 6 characters.");
                 return;
             }
             
@@ -1547,9 +1425,6 @@
                 client.subscribe(`${base_topic}/notes`);
                 client.subscribe(`${base_topic}/protocol`);
                 client.subscribe(`${base_topic}/system`);
-                
-                // Start animations
-                gsap.to('.status-indicator', {duration: 1, scale: 1.2, repeat: -1, yoyo: true, ease: "power2.inOut"});
             });
 
             client.on("message", (topic, message) => {
@@ -1575,15 +1450,12 @@
                         if (payload.st) {
                             if (payload.st.mean !== undefined) {
                                 document.getElementById("stat-mean").textContent = payload.st.mean.toFixed(3) + " V";
-                                animateValue('stat-mean', payload.st.mean);
                             }
                             if (payload.st.vpp !== undefined) {
                                 document.getElementById("stat-vpp").textContent = payload.st.vpp.toFixed(3) + " V";
-                                animateValue('stat-vpp', payload.st.vpp);
                             }
                             if (payload.st.dom_freq !== undefined) {
                                 document.getElementById("stat-freq").textContent = payload.st.dom_freq.toFixed(1) + " Hz";
-                                animateValue('stat-freq', payload.st.dom_freq);
                             }
                         }
                         
@@ -1600,11 +1472,9 @@
                         if (payload.pid) {
                             if (payload.pid.output !== undefined) {
                                 document.getElementById("pid-output").textContent = payload.pid.output.toFixed(3);
-                                animateValue('pid-output', payload.pid.output);
                             }
                             if (payload.pid.error !== undefined) {
                                 document.getElementById("pid-error").textContent = payload.pid.error.toFixed(3);
-                                animateValue('pid-error', payload.pid.error);
                             }
                         }
                     }
@@ -1642,10 +1512,8 @@
             const indicator = document.getElementById("status-indicator");
             if (connected) {
                 indicator.classList.add("connected");
-                gsap.to(indicator, {duration: 0.5, boxShadow: "0 0 20px rgba(0, 255, 136, 0.8)"});
             } else {
                 indicator.classList.remove("connected");
-                gsap.to(indicator, {duration: 0.5, boxShadow: "0 0 5px rgba(255, 51, 85, 0.5)"});
             }
         }
 
@@ -1730,12 +1598,8 @@
                 btn.className = 'protocol-btn';
                 btn.textContent = proto;
                 btn.onclick = () => selectProtocol(proto);
-                btn.style.animationDelay = `${index * 0.1}s`;
                 grid.appendChild(btn);
             });
-            
-            // Animate buttons appearing
-            gsap.from('.protocol-btn', {duration: 0.5, scale: 0, opacity: 0, stagger: 0.1, ease: "back.out(1.7)"});
         }
 
         function selectProtocol(proto) {
@@ -1746,8 +1610,6 @@
                 btn.classList.remove('active');
                 if (btn.textContent === proto) {
                     btn.classList.add('active');
-                    gsap.to(btn, {duration: 0.3, scale: 1.1, ease: "power2.out"});
-                    gsap.to(btn, {duration: 0.3, scale: 1, delay: 0.2, ease: "power2.inOut"});
                 }
             });
             
@@ -1773,9 +1635,6 @@
                 // Update statistics
                 document.getElementById('proto-packets').textContent = data.results.length;
                 document.getElementById('proto-errors').textContent = '0%';
-                
-                // Animate results
-                gsap.from('#protocol-results', {duration: 0.5, y: 20, opacity: 0, ease: "power2.out"});
             } else {
                 resultsDiv.innerHTML = 'No protocol data decoded yet...';
             }
@@ -1784,26 +1643,21 @@
         function handleSystemData(data) {
             if (data.cpu !== undefined) {
                 document.getElementById('cpu-usage').textContent = data.cpu + '%';
-                animateValue('cpu-usage', data.cpu);
             }
             if (data.memory !== undefined) {
                 document.getElementById('memory-usage').textContent = data.memory + ' MB';
-                animateValue('memory-usage', data.memory);
             }
             if (data.temperature !== undefined) {
                 document.getElementById('temperature').textContent = data.temperature + '°C';
-                animateValue('temperature', data.temperature);
             }
             if (data.uptime !== undefined) {
                 document.getElementById('uptime').textContent = data.uptime;
             }
             if (data.latency !== undefined) {
                 document.getElementById('latency').textContent = data.latency + ' ms';
-                animateValue('latency', data.latency);
             }
             if (data.signal_quality !== undefined) {
                 document.getElementById('signal-quality').textContent = data.signal_quality + '%';
-                animateValue('signal-quality', data.signal_quality);
             }
         }
 
@@ -1812,14 +1666,8 @@
             if (client && client.connected) {
                 client.publish(`${base_topic}/cmds`, cmd);
                 addLogEntry(cmd, 'tx');
-                
-                // Animate button press
-                if (event && event.target) {
-                    gsap.to(event.target, {duration: 0.1, scale: 0.95, ease: "power2.out"});
-                    gsap.to(event.target, {duration: 0.1, scale: 1, delay: 0.1, ease: "power2.inOut"});
-                }
             } else {
-                showNotification("Not connected to cloud relay.", 'error');
+                alert("Not connected to cloud relay.");
             }
         }
 
@@ -1860,7 +1708,7 @@
             localStorage.setItem('stm32-lab-notes', notes);
             localStorage.setItem('stm32-lab-notes-timestamp', new Date().toISOString());
             addLogEntry('Notes saved locally', 'info');
-            showNotification('Notes saved successfully!', 'success');
+            alert('Notes saved successfully!');
         }
 
         function loadNotes() {
@@ -1871,9 +1719,9 @@
                 document.getElementById('notes-area').value = notes;
                 const date = timestamp ? new Date(timestamp).toLocaleString() : 'Unknown';
                 addLogEntry(`Notes loaded from ${date}`, 'info');
-                showNotification('Notes loaded successfully!', 'success');
+                alert('Notes loaded successfully!');
             } else {
-                showNotification('No saved notes found', 'warning');
+                alert('No saved notes found');
             }
         }
 
@@ -1890,13 +1738,13 @@
                 localStorage.removeItem('stm32-lab-notes');
                 localStorage.removeItem('stm32-lab-notes-timestamp');
                 addLogEntry('Notes cleared', 'info');
-                showNotification('Notes cleared', 'info');
+                alert('Notes cleared');
             }
         }
 
         function shareNotes() {
             if (!client || !client.connected) {
-                showNotification('Must be connected to share notes', 'error');
+                alert('Must be connected to share notes');
                 return;
             }
             
@@ -1913,7 +1761,7 @@
             
             client.publish(`${base_topic}/notes`, JSON.stringify(noteData));
             addLogEntry(`Notes shared by ${author}`, 'info');
-            showNotification('Notes shared successfully!', 'success');
+            alert('Notes shared successfully!');
         }
 
         function exportNotes() {
@@ -1925,7 +1773,7 @@
             a.download = `stm32-lab-notes-${new Date().toISOString().split('T')[0]}.txt`;
             a.click();
             URL.revokeObjectURL(url);
-            showNotification('Notes exported successfully!', 'success');
+            alert('Notes exported successfully!');
         }
 
         function handleSharedNotes(noteData) {
@@ -1935,7 +1783,7 @@
             const noteHtml = `
                 <div style="border-bottom: 1px solid var(--BORDER); padding: 12px; margin-bottom: 10px; border-radius: 8px; background: rgba(var(--CARD_BG), 0.5);">
                     <div style="color: var(--PRIMARY); font-weight: 600; margin-bottom: 8px;">
-                        👤 ${noteData.author} - 📅 ${date}
+                        ${noteData.author} - ${date}
                     </div>
                     <div style="color: var(--TEXT); white-space: pre-wrap; line-height: 1.5;">
                         ${noteData.content}
@@ -1950,9 +1798,6 @@
             while (notes.length > 10) {
                 sharedDiv.removeChild(notes[notes.length - 1]);
             }
-            
-            // Animate new note
-            gsap.from(sharedDiv.firstChild, {duration: 0.5, x: -50, opacity: 0, ease: "power2.out"});
         }
 
         function updateMMHistory(reading) {
@@ -1986,12 +1831,12 @@
             a.download = `stm32-lab-debug-${new Date().toISOString().split('T')[0]}.log`;
             a.click();
             URL.revokeObjectURL(url);
-            showNotification('Debug log exported!', 'success');
+            alert('Debug log exported!');
         }
 
         function toggleDebugMode() {
             debugMode = !debugMode;
-            showNotification(`Debug mode ${debugMode ? 'enabled' : 'disabled'}`, 'info');
+            alert(`Debug mode ${debugMode ? 'enabled' : 'disabled'}`);
         }
 
         // Utility functions
@@ -2003,13 +1848,6 @@
             // Update FPS
             if (window.fps) {
                 document.getElementById('fps').textContent = window.fps;
-            }
-        }
-
-        function animateValue(elementId, value) {
-            const element = document.getElementById(elementId);
-            if (element) {
-                gsap.to(element, {duration: 0.5, textContent: value.toFixed(3), ease: "power2.out"});
             }
         }
 
@@ -2031,12 +1869,15 @@
             notification.textContent = message;
             document.body.appendChild(notification);
             
-            gsap.to(notification, {duration: 0.5, x: 0, ease: "power2.out"});
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
             
             setTimeout(() => {
-                gsap.to(notification, {duration: 0.5, x: 400, ease: "power2.in", onComplete: () => {
+                notification.style.transform = 'translateX(400px)';
+                setTimeout(() => {
                     document.body.removeChild(notification);
-                }});
+                }, 300);
             }, 3000);
         }
 
@@ -2051,54 +1892,6 @@
             while (entries.length > 100) {
                 debugConsole.removeChild(entries[entries.length - 1]);
             }
-        }
-
-        // Particle system
-        function initParticles() {
-            const container = document.getElementById('particles');
-            for (let i = 0; i < 20; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'particle';
-                particle.style.left = Math.random() * 100 + '%';
-                particle.style.animationDelay = Math.random() * 10 + 's';
-                particle.style.animationDuration = (10 + Math.random() * 10) + 's';
-                container.appendChild(particle);
-            }
-        }
-
-        function updateParticles() {
-            const particles = document.querySelectorAll('.particle');
-            particles.forEach(particle => {
-                particle.style.background = getComputedStyle(document.body).getPropertyValue('--PRIMARY');
-            });
-        }
-
-        // Initialize animations
-        function initAnimations() {
-            // Animate cards on load
-            gsap.from('.card', {duration: 0.8, y: 30, opacity: 0, stagger: 0.1, ease: "power2.out"});
-            
-            // Animate stat displays
-            gsap.from('.stat-display', {duration: 1, scale: 0.8, opacity: 0, stagger: 0.1, ease: "back.out(1.7)"});
-            
-            // Animate buttons
-            gsap.from('.btn', {duration: 0.6, y: 20, opacity: 0, stagger: 0.05, ease: "power2.out"});
-            
-            // FPS counter
-            let lastTime = performance.now();
-            let frames = 0;
-            
-            function updateFPS() {
-                frames++;
-                const currentTime = performance.now();
-                if (currentTime >= lastTime + 1000) {
-                    window.fps = Math.round(frames * 1000 / (currentTime - lastTime));
-                    frames = 0;
-                    lastTime = currentTime;
-                }
-                requestAnimationFrame(updateFPS);
-            }
-            updateFPS();
         }
     </script>
 </body>

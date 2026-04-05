@@ -227,12 +227,18 @@ class MainWindow(QMainWindow):
         self._apply_os_theme()
         self._override_theme_from_settings()
 
-        # Serial auto-detect: select last used port if available
+        # Serial auto-detect: only autoconnect if STM32 device is detected
         last_port = self._settings.get("last_port", "")
         if last_port:
             idx = self.tab_conn.cmb_port.findText(last_port)
             if idx >= 0:
                 self.tab_conn.cmb_port.setCurrentIndex(idx)
+                # Only autoconnect if it's actually an STM32 device
+                if self._is_stm32_device(last_port):
+                    self.tab_conn.log(f"STM32 device detected on {last_port}, connecting...", T.PRIMARY)
+                    self._on_connect(last_port)
+                else:
+                    self.tab_conn.log(f"Last port {last_port} is not an STM32 device", T.TEXT_MUTED)
 
         # Status bar clock
         self._sb_timer = QTimer()
