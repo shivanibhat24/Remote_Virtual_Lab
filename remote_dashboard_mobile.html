@@ -427,6 +427,10 @@
                     <span class="status-value" id="session-id">--</span>
                 </div>
                 <div class="status-item">
+                    <span class="status-label">Broker:</span>
+                    <input type="text" id="broker-url" class="input-control" placeholder="test.mosquitto.org:1883" style="flex: 1; min-width: 200px;">
+                </div>
+                <div class="status-item">
                     <button class="btn btn-primary" id="connect-btn" onclick="toggleConnection()">Connect</button>
                 </div>
             </div>
@@ -685,6 +689,16 @@
                 }
             };
 
+            connectToBroker();
+        }
+
+        function connectToBroker() {
+            const brokerUrlInput = document.getElementById('broker-url');
+            const brokerUrl = brokerUrlInput.value.trim() || 'wss://test.mosquitto.org:8081/mqtt';
+            const useSSL = brokerUrl.startsWith('wss://');
+            
+            console.log('Connecting to MQTT broker:', brokerUrl);
+            
             client.connect({
                 onSuccess: function() {
                     isConnected = true;
@@ -695,12 +709,12 @@
                 onFailure: function(responseObject) {
                     console.error('MQTT connection failed:', responseObject.errorMessage);
                     updateConnectionStatus('Connection Failed');
+                    updateConnectButton('Connect');
                 },
-                useSSL: true,  // Use WebSocket for better mobile compatibility
+                useSSL: useSSL,
                 cleanSession: true,
                 reconnectPeriod: 5,
-                timeout: 10,
-                keepAliveInterval: 60
+                timeout: 10
             });
         }
 
