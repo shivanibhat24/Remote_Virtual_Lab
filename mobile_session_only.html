@@ -9,7 +9,8 @@
         // Check if Paho MQTT is loaded
         if (typeof Paho === 'undefined') {
             console.error('Paho MQTT library not loaded');
-            alert('MQTT library failed to load. Please check your internet connection and refresh the page.');
+            // Don't use alert - it causes endless loops
+            updateConnectionStatus('MQTT Library Error');
         } else {
             console.log('Paho MQTT library loaded successfully');
         }
@@ -731,7 +732,15 @@
             if (typeof Paho === 'undefined') {
                 console.error('Paho MQTT library not loaded');
                 updateConnectionStatus('MQTT Library Error');
-                addMessage('error', 'MQTT library failed to load. Please refresh the page.');
+                addMessage('error', 'MQTT library failed to load. Please check your internet connection and try a different browser.');
+                
+                // Disable connect button when library not available
+                const connectBtn = document.getElementById('connect-btn');
+                if (connectBtn) {
+                    connectBtn.disabled = true;
+                    connectBtn.textContent = 'MQTT Library Not Available';
+                    connectBtn.className = 'btn btn-secondary';
+                }
                 return;
             }
 
@@ -762,6 +771,12 @@
             if (isConnected) {
                 disconnectMQTT();
             } else {
+                // Check if button is disabled (library not available)
+                const connectBtn = document.getElementById('connect-btn');
+                if (connectBtn && connectBtn.disabled) {
+                    addMessage('error', 'MQTT library not available. Please check your internet connection and try a different browser.');
+                    return;
+                }
                 connectMQTT();
             }
         }
