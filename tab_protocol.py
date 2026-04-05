@@ -252,7 +252,235 @@ def decode_onewire(samples: np.ndarray, threshold: float, sample_rate: float) ->
     return results
 
 
-PROTOCOL_NAMES = ("I2C", "SPI", "UART", "1-Wire")
+def decode_can(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """CAN bus: look for SOF (dominant) followed by arbitration and data fields."""
+    digital = _to_digital(samples, threshold)
+    edges = _find_edges(digital)
+    results: List[Dict] = []
+    n = len(digital)
+    
+    # CAN bit time typically 1-10 µs, need at least 11 bits for minimal frame
+    min_bit_samples = max(2, int(0.000001 * sample_rate)) if sample_rate > 0 else 2
+    
+    for i, (idx, kind) in enumerate(edges):
+        if kind != "falling":  # SOF is dominant (0) after recessive (1)
+            continue
+            
+        # Check if we have enough samples for a minimal CAN frame
+        if idx + 11 * min_bit_samples >= n:
+            continue
+            
+        # Estimate bit time from edge spacing
+        if i + 1 < len(edges):
+            next_edge = edges[i + 1][0]
+            bit_time = next_edge - idx
+            if bit_time < min_bit_samples or bit_time > n // 4:
+                continue
+        else:
+            continue
+            
+        # Extract first 11 bits (SOF + 11-bit identifier)
+        bits = []
+        for bit_idx in range(11):
+            sample_pos = idx + bit_idx * bit_time // 2
+            if sample_pos < n:
+                bits.append(int(digital[sample_pos]))
+            else:
+                bits.append(1)  # Default to recessive
+                
+        if len(bits) >= 11:
+            # Extract identifier (11 bits after SOF)
+            identifier = sum(bits[1 + i] << (10 - i) for i in range(11))
+            t_ms = idx / sample_rate * 1000
+            results.append({
+                "proto": "CAN",
+                "time_ms": f"{t_ms:.2f}",
+                "info": f"ID:0x{identifier:03X}",
+                "ack": "-",
+                "crc": "-",
+            })
+            
+    return results
+
+
+def decode_lin(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """LIN bus: look for break field (low > 13 bit times) followed by sync."""
+    digital = _to_digital(samples, threshold)
+    results: List[Dict] = []
+    n = len(digital)
+    i = 0
+    
+    # LIN break: dominant for at least 13 bit times (nominal 20 µs per bit at 19200 baud)
+    min_break_samples = int(13 * 0.000020 * sample_rate) if sample_rate > 0 else 260
+    
+    while i < n:
+        if i > 0 and digital[i - 1] == 1 and digital[i] == 0:
+            j = i
+            while j < n and digital[j] == 0:
+                j += 1
+            break_samples = j - i
+            
+            if break_samples >= min_break_samples:
+                # Look for sync byte (0x55) after break
+                sync_start = j
+                if sync_start + 80 < n:  # 8 bits * 10 samples per bit
+                    # Simple sync detection - look for alternating pattern
+                    sync_ok = True
+                    for bit in range(8):
+                        sample_pos = sync_start + bit * 10
+                        expected = 1 if bit % 2 == 0 else 0
+                        if sample_pos < n and int(digital[sample_pos]) != expected:
+                            sync_ok = False
+                            break
+                    
+                    if sync_ok:
+                        t_ms = i / sample_rate * 1000
+                        results.append({
+                            "proto": "LIN",
+                            "time_ms": f"{t_ms:.2f}",
+                            "info": f"BREAK {break_samples} samples + SYNC",
+                            "ack": "-",
+                            "crc": "-",
+                        })
+                        i = sync_start + 80
+                        continue
+        i += 1
+        
+    return results
+
+
+def decode_pwm(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """PWM signal: measure duty cycle and frequency."""
+    digital = _to_digital(samples, threshold)
+    edges = _find_edges(digital)
+    results: List[Dict] = []
+    
+    if len(edges) < 4:
+        return results
+        
+    # Measure multiple periods for accuracy
+    periods = []
+    duty_cycles = []
+    
+    for i in range(0, len(edges) - 2, 2):
+        if i + 2 < len(edges):
+            rising1 = edges[i][0]
+            falling = edges[i + 1][0]
+            rising2 = edges[i + 2][0]
+            
+            period = rising2 - rising1
+            high_time = falling - rising1
+            
+            if period > 0 and high_time > 0 and high_time < period:
+                periods.append(period)
+                duty_cycles.append(high_time / period)
+    
+    if periods:
+        avg_period = sum(periods) / len(periods)
+        avg_duty = sum(duty_cycles) / len(duty_cycles)
+        freq_hz = sample_rate / avg_period if avg_period > 0 else 0
+        duty_pct = avg_duty * 100
+        
+        t_ms = edges[0][0] / sample_rate * 1000
+        results.append({
+            "proto": "PWM",
+            "time_ms": f"{t_ms:.2f}",
+            "info": f"{freq_hz:.1f}Hz {duty_pct:.1f}% duty",
+            "ack": "-",
+            "crc": "-",
+        })
+        
+    return results
+
+
+def decode_manchester(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """Manchester encoding: mid-bit transitions indicate data."""
+    digital = _to_digital(samples, threshold)
+    edges = _find_edges(digital)
+    results: List[Dict] = []
+    
+    if len(edges) < 4:
+        return results
+        
+    # Estimate bit time from edge spacing
+    edge_intervals = [edges[i + 1][0] - edges[i][0] for i in range(len(edges) - 1)]
+    if not edge_intervals:
+        return results
+        
+    bit_time = min(edge_intervals)  # Shortest interval is likely bit time
+    min_bit_samples = max(2, int(bit_time * 0.8))
+    max_bit_samples = int(bit_time * 1.2)
+    
+    # Look for valid bit intervals
+    bits = []
+    for i in range(len(edges) - 1):
+        interval = edges[i + 1][0] - edges[i][0]
+        if min_bit_samples <= interval <= max_bit_samples:
+            # Determine bit based on transition direction
+            if edges[i][1] == "rising":
+                bits.append(0)  # 0 = rising transition
+            else:
+                bits.append(1)  # 1 = falling transition
+    
+    if len(bits) >= 8:
+        # Convert first 8 bits to byte
+        byte_val = sum(bits[i] << (7 - i) for i in range(min(8, len(bits))))
+        t_ms = edges[0][0] / sample_rate * 1000
+        results.append({
+            "proto": "Manchester",
+            "time_ms": f"{t_ms:.2f}",
+            "info": f"0x{byte_val:02X}",
+            "ack": "-",
+            "crc": "-",
+        })
+        
+    return results
+
+
+def decode_nrz(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """NRZ (Non-Return to Zero): level-based encoding."""
+    digital = _to_digital(samples, threshold)
+    results: List[Dict] = []
+    n = len(digital)
+    
+    # Look for level changes and estimate bit boundaries
+    edges = _find_edges(digital)
+    if len(edges) < 2:
+        return results
+        
+    # Estimate bit time from average edge spacing
+    if len(edges) > 1:
+        intervals = [edges[i + 1][0] - edges[i][0] for i in range(len(edges) - 1)]
+        bit_time = sum(intervals) / len(intervals) if intervals else 100
+        bit_time = max(2, min(bit_time, n // 10))
+    else:
+        bit_time = 100
+    
+    # Sample bits at regular intervals
+    bits = []
+    start_pos = edges[0][0] if edges else 0
+    
+    for i in range(0, min(n - start_pos, bit_time * 10), bit_time):
+        pos = start_pos + i + bit_time // 2
+        if pos < n:
+            bits.append(int(digital[pos]))
+    
+    if len(bits) >= 8:
+        # Convert first 8 bits to byte
+        byte_val = sum(bits[i] << (7 - i) for i in range(min(8, len(bits))))
+        t_ms = start_pos / sample_rate * 1000
+        results.append({
+            "proto": "NRZ",
+            "time_ms": f"{t_ms:.2f}",
+            "info": f"0x{byte_val:02X}",
+            "ack": "-",
+            "crc": "-",
+        })
+        
+    return results
+
+
+PROTOCOL_NAMES = ("I2C", "SPI", "UART", "1-Wire", "CAN", "LIN", "PWM", "Manchester", "NRZ")
 
 
 # 
@@ -598,13 +826,28 @@ class ProtocolDecoderTab(QWidget):
             )
         elif proto == "1-Wire":
             results = decode_onewire(samples, threshold, sample_rate)
+        elif proto == "CAN":
+            results = decode_can(samples, threshold, sample_rate)
+        elif proto == "LIN":
+            results = decode_lin(samples, threshold, sample_rate)
+        elif proto == "PWM":
+            results = decode_pwm(samples, threshold, sample_rate)
+        elif proto == "Manchester":
+            results = decode_manchester(samples, threshold, sample_rate)
+        elif proto == "NRZ":
+            results = decode_nrz(samples, threshold, sample_rate)
         else:
             results = []
 
         # Populate table
         self._clear()
-        colors = {"I2C": T.ACCENT_BLUE, "SPI": T.PRIMARY,
-                  "UART": T.ACCENT_AMBER, "1-Wire": T.ACCENT_PUR}
+        colors = {
+            "I2C": T.ACCENT_BLUE, "SPI": T.PRIMARY,
+            "UART": T.ACCENT_AMBER, "1-Wire": T.ACCENT_PUR,
+            "CAN": T.ACCENT_CYAN, "LIN": T.ACCENT_RED,
+            "PWM": T.PRIMARY, "Manchester": T.ACCENT_BLUE,
+            "NRZ": T.TEXT_MUTED
+        }
         col = colors.get(proto, T.TEXT)
 
         for r in results:
