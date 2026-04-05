@@ -418,8 +418,37 @@ class MultimeterTab(QWidget):
         self.plot_widget.setXRange(-10.0 * self.spin_timediv.value(), 0.0, padding=0)
 
     def _on_mode_changed(self):
+        mode_key = self.cmb_mode.currentText()
+        mode_char = self.MODE_MAP[mode_key]
+        
+        # Update unit display based on selected mode
+        if mode_char == "V":
+            self.lbl_unit.setText("VOLTS")
+            self.lbl_value.setStyleSheet(
+                f"color: {T.PRIMARY}; background: transparent; border: none;")
+        elif mode_char == "A":
+            self.lbl_unit.setText("AMPERES")
+            self.lbl_value.setStyleSheet(
+                f"color: {T.ACCENT_BLUE}; background: transparent; border: none;")
+        elif mode_char == "D":
+            self.lbl_unit.setText("VOLTS")
+            self.lbl_value.setStyleSheet(
+                f"color: {T.PRIMARY}; background: transparent; border: none;")
+        elif mode_char == "G":
+            self.lbl_unit.setText("GND")
+            self.lbl_value.setStyleSheet(
+                f"color: {T.TEXT_MUTED}; background: transparent; border: none;")
+        else:
+            self.lbl_unit.setText("SELECT MODE")
+            self.lbl_value.setStyleSheet(
+                f"color: {T.TEXT_MUTED}; background: transparent; border: none;")
+        
+        # Update range dropdown availability
         self.cmb_range.setEnabled(
-            self.cmb_mode.currentText() in ("Voltmeter", "DSO"))
+            mode_char in ("V", "D"))
+        
+        # Clear value display when mode changes
+        self.lbl_value.setText("---")
 
     def _on_send(self):
         mode_key  = self.cmb_mode.currentText()
