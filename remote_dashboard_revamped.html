@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>STM32 Remote Laboratory - Revamped Mobile Interface</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* Professional Mobile-First CSS */
+        :root {
+            --BG_PRIMARY: #ffffff;
+            --BG_SECONDARY: #f8f9fa;
+            --BG_TERTIARY: #e9ecef;
+            --BG_DARK: #212529;
+            --BORDER_COLOR: #dee2e6;
+            --BORDER_LIGHT: #f1f3f4;
+            --TEXT_PRIMARY: #212529;
+            --TEXT_SECONDARY: #6c757d;
+            --TEXT_MUTED: #adb5bd;
+            --TEXT_WHITE: #ffffff;
+            --PRIMARY_COLOR: #0066cc;
+            --SECONDARY_COLOR: #28a745;
+            --DANGER_COLOR: #dc3545;
+            --WARNING_COLOR: #ffc107;
+            --INFO_COLOR: #17a2b8;
+            --SUCCESS_COLOR: #20c997;
+            --FONT_FAMILY: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --FONT_MONO: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+            --SHADOW_SOFT: 0 4px 12px rgba(0,0,0,0.08);
+            --SHADOW_MEDIUM: 0 8px 24px rgba(0,0,0,0.12);
+            --SHADOW_HARD: 0 12px 32px rgba(0,0,0,0.16);
+            --TRANSITION_FAST: 0.15s ease;
+            --TRANSITION_NORMAL: 0.25s ease;
+            --TRANSITION_SLOW: 0.35s ease;
+        }
+
+        /* Dark Mode */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --BG_PRIMARY: #0f1419;
+                --BG_SECONDARY: #1a1f2e;
+                --BG_TERTIARY: #2d3748;
+                --BG_DARK: #000000;
+                --BORDER_COLOR: #4a5568;
+                --BORDER_LIGHT: #718096;
+                --TEXT_PRIMARY: #e2e8f0;
+                --TEXT_SECONDARY: #a0aec0;
+                --TEXT_MUTED: #718096;
+                --TEXT_WHITE: #ffffff;
+                --PRIMARY_COLOR: #3182ce;
+                --SECONDARY_COLOR: #38a169;
+                --DANGER_COLOR: #e53e3e;
+                --WARNING_COLOR: #d69e2e;
+                --INFO_COLOR: #3182ce;
+                --SUCCESS_COLOR: #48bb78;
+            }
+        }
+
+        /* Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--FONT_FAMILY);
+            background: var(--BG_PRIMARY);
+            color: var(--TEXT_PRIMARY);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Container */
+        .container {
+            max-width: 100%;
+            padding: 8px;
+            margin: 0 auto;
+            background: var(--BG_PRIMARY);
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--BG_SECONDARY) 0%, var(--BG_TERTIARY) 100%);
+            padding: 16px;
+            margin-bottom: 16px;
+            border-radius: 16px;
+            box-shadow: var(--SHADOW_SOFT);
+            border: 1px solid var(--BORDER_COLOR);
+        }
+
+        .header h1 {
+            font-size: clamp(1.25rem, 4vw, 1.5rem);
+            font-weight: 700;
+            color: var(--TEXT_PRIMARY);
+            text-align: center;
+            margin: 0 0 12px 0;
+        }
+
+        /* Connection Panel */
+        .connection-panel {
+            background: var(--BG_TERTIARY);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--BORDER_COLOR);
+            box-shadow: var(--SHADOW_SOFT);
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--BG_PRIMARY);
+            border-radius: 20px;
+            border: 1px solid var(--BORDER_COLOR);
+            font-size: clamp(0.75rem, 2vw, 0.875rem);
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--DANGER_COLOR);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: var(--SUCCESS_COLOR);
+        }
+
+        .status-dot.connecting {
+            background: var(--WARNING_COLOR);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Input Controls */
+        .input-group {
+            margin-bottom: 12px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: clamp(0.75rem, 2vw, 0.875rem);
+            color: var(--TEXT_MUTED);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .input-control {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: clamp(0.875rem, 2.5vw, 1rem);
+            border: 2px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            background: var(--BG_PRIMARY);
+            color: var(--TEXT_PRIMARY);
+            transition: all var(--TRANSITION_FAST);
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .input-control:focus {
+            outline: none;
+            border-color: var(--PRIMARY_COLOR);
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 14px 20px;
+            font-size: clamp(0.875rem, 2.5vw, 1rem);
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all var(--TRANSITION_FAST);
+            text-align: center;
+            margin-bottom: 8px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--PRIMARY_COLOR) 0%, #0052a3 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 102, 204, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--DANGER_COLOR) 0%, #c82333 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--BG_TERTIARY);
+            color: var(--TEXT_PRIMARY);
+            border: 2px solid var(--BORDER_COLOR);
+        }
+
+        .btn-secondary:hover {
+            background: var(--BORDER_COLOR);
+            transform: translateY(-1px);
+        }
+
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            background: var(--BG_SECONDARY);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 16px;
+            overflow-x: auto;
+            box-shadow: var(--SHADOW_SOFT);
+            border: 1px solid var(--BORDER_COLOR);
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 12px 8px;
+            background: transparent;
+            border: none;
+            color: var(--TEXT_SECONDARY);
+            font-size: clamp(0.75rem, 2.5vw, 0.875rem);
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--TRANSITION_FAST);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 80px;
+            border-radius: 6px;
+        }
+
+        .tab-button:hover {
+            color: var(--TEXT_PRIMARY);
+            background: var(--BG_TERTIARY);
+        }
+
+        .tab-button.active {
+            color: var(--TEXT_WHITE);
+            background: var(--PRIMARY_COLOR);
+            font-weight: 600;
+            box-shadow: var(--SHADOW_SOFT);
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            animation: fadeIn var(--TRANSITION_NORMAL);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Control Panels */
+        .control-panel {
+            background: var(--BG_SECONDARY);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--SHADOW_SOFT);
+            border: 1px solid var(--BORDER_COLOR);
+        }
+
+        .panel-header {
+            font-size: clamp(1rem, 3vw, 1.125rem);
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            margin-bottom: 16px;
+            text-align: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--BORDER_COLOR);
+        }
+
+        /* Grid Layouts */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 8px;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 8px;
+        }
+
+        /* Value Displays */
+        .value-display {
+            background: var(--BG_TERTIARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 12px;
+            transition: all var(--TRANSITION_FAST);
+        }
+
+        .value-display:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--SHADOW_SOFT);
+        }
+
+        .value-label {
+            font-size: clamp(0.75rem, 2vw, 0.875rem);
+            color: var(--TEXT_MUTED);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .value-number {
+            font-size: clamp(1.25rem, 4vw, 1.5rem);
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            font-family: var(--FONT_MONO);
+        }
+
+        .value-unit {
+            font-size: clamp(0.75rem, 2vw, 0.875rem);
+            color: var(--TEXT_SECONDARY);
+            font-weight: 500;
+        }
+
+        /* Statistics Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+        }
+
+        .stat-card {
+            background: var(--BG_TERTIARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            transition: all var(--TRANSITION_FAST);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--SHADOW_SOFT);
+        }
+
+        .stat-label {
+            font-size: clamp(0.625rem, 2vw, 0.75rem);
+            color: var(--TEXT_MUTED);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: clamp(1rem, 3vw, 1.125rem);
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            font-family: var(--FONT_MONO);
+        }
+
+        /* Chart Container */
+        .chart-container {
+            background: var(--BG_SECONDARY);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--SHADOW_SOFT);
+            border: 1px solid var(--BORDER_COLOR);
+            height: 350px;
+            position: relative;
+        }
+
+        .chart-container canvas {
+            max-height: 100%;
+        }
+
+        /* Live Data Display */
+        .live-data-container {
+            background: var(--BG_SECONDARY);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--SHADOW_SOFT);
+            border: 1px solid var(--BORDER_COLOR);
+        }
+
+        .live-data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+
+        .live-data-item {
+            background: var(--BG_TERTIARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            transition: all var(--TRANSITION_FAST);
+        }
+
+        .live-data-item.updating {
+            background: var(--PRIMARY_COLOR);
+            color: var(--TEXT_WHITE);
+            animation: dataUpdate 0.3s ease;
+        }
+
+        @keyframes dataUpdate {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Message Log */
+        .message-log {
+            background: var(--BG_TERTIARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            padding: 12px;
+            height: 150px;
+            overflow-y: auto;
+            font-family: var(--FONT_MONO);
+            font-size: clamp(0.75rem, 2vw, 0.875rem);
+            margin-bottom: 12px;
+        }
+
+        .message-log .message {
+            margin-bottom: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: var(--BG_PRIMARY);
+            color: var(--TEXT_PRIMARY);
+        }
+
+        .message-log .message.sent {
+            background: var(--INFO_COLOR);
+            color: var(--TEXT_WHITE);
+        }
+
+        .message-log .message.received {
+            background: var(--SUCCESS_COLOR);
+            color: var(--TEXT_WHITE);
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 480px) {
+            .container {
+                padding: 4px;
+            }
+            
+            .header {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+            
+            .connection-status {
+                flex-direction: column;
+                gap: 4px;
+            }
+            
+            .status-indicator {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .tab-button {
+                padding: 10px 6px;
+                font-size: clamp(0.625rem, 3vw, 0.75rem);
+                min-width: 60px;
+            }
+            
+            .grid-2 {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .grid-3 {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+            
+            .grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+            
+            .btn {
+                padding: 12px 16px;
+                font-size: clamp(0.75rem, 3vw, 0.875rem);
+            }
+            
+            .chart-container {
+                height: 250px;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .tab-button {
+                font-size: clamp(0.5rem, 4vw, 0.625rem);
+                padding: 8px 4px;
+                min-width: 50px;
+            }
+            
+            .btn {
+                padding: 10px 12px;
+                font-size: clamp(0.625rem, 4vw, 0.75rem);
+            }
+            
+            .value-number {
+                font-size: clamp(1rem, 4vw, 1.125rem);
+            }
+            
+            .chart-container {
+                height: 200px;
+            }
+        }
+
+        /* Touch Optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .btn, .tab-button, .input-control {
+                min-height: 44px;
+                min-width: 44px;
+            }
+        }
+
+        /* Prevent zoom on mobile */
+        @media (max-width: 768px) {
+            body {
+                -ms-text-size-adjust: 100%;
+                -webkit-text-size-adjust: 100%;
+            }
+        }
+
+        /* Reduce motion on mobile */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔬 STM32 Remote Laboratory</h1>
+        </div>
+
+        <!-- Connection Panel -->
+        <div class="connection-panel">
+            <div class="connection-status">
+                <div class="status-indicator">
+                    <span class="status-dot" id="status-dot"></span>
+                    <span id="connection-status">Disconnected</span>
+                </div>
+                <div class="status-indicator">
+                    <span>Session:</span>
+                    <span id="session-id">--</span>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label for="broker-url">MQTT Broker URL</label>
+                <input type="text" id="broker-url" class="input-control" 
+                       placeholder="wss://test.mosquitto.org:8081/mqtt" 
+                       value="wss://test.mosquitto.org:8081/mqtt">
+            </div>
+            
+            <div class="input-group">
+                <label for="session-id-input">Session ID (Optional)</label>
+                <input type="text" id="session-id-input" class="input-control" 
+                       placeholder="Leave empty for auto-generated">
+            </div>
+            
+            <button class="btn btn-primary" id="connect-btn" onclick="toggleConnection()">
+                Connect to Broker
+            </button>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-button active" onclick="switchTab('oscilloscope')">📊 Oscilloscope</button>
+            <button class="tab-button" onclick="switchTab('multimeter')">📏 Multimeter</button>
+            <button class="tab-button" onclick="switchTab('function')">🎛️ Function Gen</button>
+            <button class="tab-button" onclick="switchTab('protocol')">📡 Protocol</button>
+            <button class="tab-button" onclick="switchTab('pid')">🎯 PID Control</button>
+            <button class="tab-button" onclick="switchTab('live')">📈 Live Data</button>
+        </div>
+
+        <!-- Oscilloscope Tab -->
+        <div class="tab-content active" id="oscilloscope">
+            <div class="control-panel">
+                <div class="panel-header">Oscilloscope Controls</div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label for="timebase">Timebase</label>
+                        <select id="timebase" class="input-control">
+                            <option value="0.001">0.001 ms</option>
+                            <option value="0.01">0.01 ms</option>
+                            <option value="0.1">0.1 ms</option>
+                            <option value="1" selected>1 ms</option>
+                            <option value="10">10 ms</option>
+                            <option value="100">100 ms</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="trigger">Trigger Mode</label>
+                        <select id="trigger" class="input-control">
+                            <option value="auto">Auto</option>
+                            <option value="normal">Normal</option>
+                            <option value="single">Single</option>
+                            <option value="force">Force</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-3">
+                    <button class="btn btn-secondary" onclick="sendCommand('#MODE:D')">DSO Mode</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#TRIG:AUTO')">Auto Trigger</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#TRIG:SINGLE')">Single Trigger</button>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="oscilloscope-chart"></canvas>
+            </div>
+            
+            <div class="live-data-container">
+                <div class="panel-header">Live Oscilloscope Data</div>
+                <div class="live-data-grid">
+                    <div class="live-data-item" id="dso-vrms">
+                        <div class="value-label">VRMS</div>
+                        <div class="value-number">0.000</div>
+                        <div class="value-unit">V</div>
+                    </div>
+                    <div class="live-data-item" id="dso-vpp">
+                        <div class="value-label">VPP</div>
+                        <div class="value-number">0.000</div>
+                        <div class="value-unit">V</div>
+                    </div>
+                    <div class="live-data-item" id="dso-freq">
+                        <div class="value-label">Frequency</div>
+                        <div class="value-number">0</div>
+                        <div class="value-unit">Hz</div>
+                    </div>
+                    <div class="live-data-item" id="dso-samples">
+                        <div class="value-label">Samples</div>
+                        <div class="value-number">0</div>
+                        <div class="value-unit">pts</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Multimeter Tab -->
+        <div class="tab-content" id="multimeter">
+            <div class="control-panel">
+                <div class="panel-header">Measurement Mode</div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label for="meter-mode">Mode</label>
+                        <select id="meter-mode" class="input-control">
+                            <option value="V">DC Voltage</option>
+                            <option value="A">DC Current</option>
+                            <option value="R">Resistance</option>
+                            <option value="C">Capacitance</option>
+                            <option value="F">Frequency</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="meter-range">Range</label>
+                        <select id="meter-range" class="input-control">
+                            <option value="12">12V</option>
+                            <option value="16">16V</option>
+                            <option value="24">24V</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-3">
+                    <button class="btn btn-secondary" onclick="sendCommand('#MODE:V')">DC Voltage</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#MODE:A')">DC Current</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#MODE:R')">Resistance</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#MODE:F')">Frequency</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#MODE:G')">Ground</button>
+                </div>
+            </div>
+            
+            <div class="value-display">
+                <div class="value-label">Current Measurement</div>
+                <div class="value-number" id="meter-value">0.000</div>
+                <div class="value-unit" id="meter-unit">V</div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Minimum</div>
+                    <div class="stat-value" id="meter-min">0.000</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Maximum</div>
+                    <div class="stat-value" id="meter-max">0.000</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Average</div>
+                    <div class="stat-value" id="meter-avg">0.000</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Samples</div>
+                    <div class="stat-value" id="meter-count">0</div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="multimeter-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Function Generator Tab -->
+        <div class="tab-content" id="function">
+            <div class="control-panel">
+                <div class="panel-header">Waveform Generator</div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label>Waveform Type</label>
+                        <div class="grid-3">
+                            <button class="btn btn-secondary" onclick="sendCommand('#WAVE:SQ')">Square</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#WAVE:SI')">Sine</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#WAVE:TR')">Triangle</button>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Frequency</label>
+                        <div class="grid-4">
+                            <button class="btn btn-secondary" onclick="sendCommand('#WAVE:F=10')">10 Hz</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#WAVE:F=100')">100 Hz</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#WAVE:F=1000')">1 kHz</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#WAVE:F=10000')">10 kHz</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label for="amplitude">Amplitude (V)</label>
+                        <input type="range" id="amplitude" class="input-control" min="0" max="5" step="0.1" value="2.5">
+                        <div class="value-display">
+                            <div class="value-number" id="amp-value">2.5V</div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="offset">Offset (V)</label>
+                        <input type="range" id="offset" class="input-control" min="-5" max="5" step="0.1" value="0">
+                        <div class="value-display">
+                            <div class="value-number" id="offset-value">0.0V</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-3">
+                    <button class="btn btn-primary" onclick="updateFunctionGenerator()">Update Settings</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#WAVE:ON')">Output ON</button>
+                    <button class="btn btn-danger" onclick="sendCommand('#WAVE:OFF')">Output OFF</button>
+                </div>
+            </div>
+            
+            <div class="live-data-container">
+                <div class="panel-header">Generator Status</div>
+                <div class="live-data-grid">
+                    <div class="live-data-item" id="fg-waveform">
+                        <div class="value-label">Waveform</div>
+                        <div class="value-number">Square</div>
+                    </div>
+                    <div class="live-data-item" id="fg-frequency">
+                        <div class="value-label">Frequency</div>
+                        <div class="value-number">1000</div>
+                        <div class="value-unit">Hz</div>
+                    </div>
+                    <div class="live-data-item" id="fg-amplitude">
+                        <div class="value-label">Amplitude</div>
+                        <div class="value-number">2.5</div>
+                        <div class="value-unit">V</div>
+                    </div>
+                    <div class="live-data-item" id="fg-status">
+                        <div class="value-label">Output</div>
+                        <div class="value-number">OFF</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="function-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Protocol Tab -->
+        <div class="tab-content" id="protocol">
+            <div class="control-panel">
+                <div class="panel-header">Protocol Commands</div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label for="custom-command">Custom Command</label>
+                        <input type="text" id="custom-command" class="input-control" placeholder="#MODE:V">
+                        <button class="btn btn-primary" onclick="sendCustomCommand()">Send Command</button>
+                    </div>
+                    <div class="input-group">
+                        <label>Quick Commands</label>
+                        <div class="grid-2">
+                            <button class="btn btn-secondary" onclick="sendCommand('#MODE:V')">DC Voltage</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#MODE:A')">DC Current</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#MODE:R')">Resistance</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#MODE:F')">Frequency</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#RANGE:V=12')">12V Range</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#RANGE:V=24')">24V Range</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="message-log" id="message-log">
+                <div class="message">📡 Protocol log will appear here...</div>
+            </div>
+        </div>
+
+        <!-- PID Control Tab -->
+        <div class="tab-content" id="pid">
+            <div class="control-panel">
+                <div class="panel-header">PID Control Parameters</div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label for="kp">P (Proportional)</label>
+                        <input type="number" id="kp" class="input-control" value="1.0" step="0.1" min="0" max="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="ki">I (Integral)</label>
+                        <input type="number" id="ki" class="input-control" value="0.1" step="0.01" min="0" max="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="kd">D (Derivative)</label>
+                        <input type="number" id="kd" class="input-control" value="0.05" step="0.01" min="0" max="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="setpoint">Setpoint</label>
+                        <input type="number" id="setpoint" class="input-control" value="5.0" step="0.1" min="0" max="12">
+                    </div>
+                </div>
+                <div class="grid-3">
+                    <button class="btn btn-primary" onclick="sendPIDCommand()">Apply Gains</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#PID:START')">Start</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#PID:STOP')">Stop</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#PID:RESET')">Reset</button>
+                </div>
+            </div>
+            
+            <div class="live-data-container">
+                <div class="panel-header">PID Status</div>
+                <div class="live-data-grid">
+                    <div class="live-data-item" id="pid-pv">
+                        <div class="value-label">Process Value</div>
+                        <div class="value-number">0.000</div>
+                        <div class="value-unit">V</div>
+                    </div>
+                    <div class="live-data-item" id="pid-sp">
+                        <div class="value-label">Setpoint</div>
+                        <div class="value-number">5.000</div>
+                        <div class="value-unit">V</div>
+                    </div>
+                    <div class="live-data-item" id="pid-output">
+                        <div class="value-label">Output</div>
+                        <div class="value-number">0.000</div>
+                        <div class="value-unit">%</div>
+                    </div>
+                    <div class="live-data-item" id="pid-error">
+                        <div class="value-label">Error</div>
+                        <div class="value-number">0.000</div>
+                        <div class="value-unit">V</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="pid-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Live Data Tab -->
+        <div class="tab-content" id="live">
+            <div class="control-panel">
+                <div class="panel-header">Real-Time Data Stream</div>
+                <div class="grid-3">
+                    <button class="btn btn-secondary" onclick="toggleDataStream()">Toggle Stream</button>
+                    <button class="btn btn-secondary" onclick="clearLiveData()">Clear Data</button>
+                    <button class="btn btn-secondary" onclick="exportLiveData()">Export CSV</button>
+                </div>
+            </div>
+            
+            <div class="live-data-container">
+                <div class="panel-header">Live Measurements</div>
+                <div class="live-data-grid">
+                    <div class="live-data-item" id="live-voltage">
+                        <div class="value-label">Voltage</div>
+                        <div class="value-number">0.000</div>
+                        <div class="value-unit">V</div>
+                    </div>
+                    <div class="live-data-item" id="live-current">
+                        <div class="value-label">Current</div>
+                        <div class="value-number">0.000</div>
+                        <div class="value-unit">A</div>
+                    </div>
+                    <div class="live-data-item" id="live-resistance">
+                        <div class="value-label">Resistance</div>
+                        <div class="value-number">0.000</div>
+                        <div class="value-unit">Ω</div>
+                    </div>
+                    <div class="live-data-item" id="live-frequency">
+                        <div class="value-label">Frequency</div>
+                        <div class="value-number">0</div>
+                        <div class="value-unit">Hz</div>
+                    </div>
+                    <div class="live-data-item" id="live-temperature">
+                        <div class="value-label">Temperature</div>
+                        <div class="value-number">0.0</div>
+                        <div class="value-unit">°C</div>
+                    </div>
+                    <div class="live-data-item" id="live-boost">
+                        <div class="value-label">Boost</div>
+                        <div class="value-number">0.0</div>
+                        <div class="value-unit">%</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="live-chart"></canvas>
+            </div>
+            
+            <div class="message-log" id="live-message-log">
+                <div class="message">📈 Live data stream will appear here...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global Variables
+        let client;
+        let isConnected = false;
+        let currentTab = 'oscilloscope';
+        let sessionId = 'mobile_' + Math.random().toString(36).substr(2, 9);
+        let dataStreamEnabled = true;
+        
+        // Chart instances
+        let oscilloscopeChart;
+        let multimeterChart;
+        let functionChart;
+        let pidChart;
+        let liveChart;
+        
+        // Data storage
+        let oscilloscopeData = [];
+        let multimeterData = [];
+        let functionData = [];
+        let pidData = [];
+        let liveData = [];
+        let maxDataPoints = 100;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            updateConnectionStatus('Disconnected');
+            document.getElementById('session-id').textContent = sessionId;
+            
+            // Set up input listeners
+            document.getElementById('amplitude').addEventListener('input', function(e) {
+                document.getElementById('amp-value').textContent = e.target.value + 'V';
+            });
+            
+            document.getElementById('offset').addEventListener('input', function(e) {
+                document.getElementById('offset-value').textContent = e.target.value + 'V';
+            });
+            
+            document.getElementById('session-id-input').addEventListener('input', function(e) {
+                if (e.target.value.trim()) {
+                    sessionId = e.target.value.trim();
+                    document.getElementById('session-id').textContent = sessionId;
+                }
+            });
+        });
+
+        // Chart Initialization
+        function initializeCharts() {
+            // Oscilloscope Chart
+            const oscilloscopeCtx = document.getElementById('oscilloscope-chart').getContext('2d');
+            oscilloscopeChart = new Chart(oscilloscopeCtx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Signal',
+                        data: [],
+                        borderColor: '#0066cc',
+                        backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 0
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Time (s)',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Amplitude (V)',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Multimeter Chart
+            const multimeterCtx = document.getElementById('multimeter-chart').getContext('2d');
+            multimeterChart = new Chart(multimeterCtx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Measurement',
+                        data: [],
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 1,
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 0
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Time (s)',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Value',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Function Generator Chart
+            const functionCtx = document.getElementById('function-chart').getContext('2d');
+            functionChart = new Chart(functionCtx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Waveform',
+                        data: [],
+                        borderColor: '#ffc107',
+                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 0
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Time (s)',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Amplitude (V)',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // PID Chart
+            const pidCtx = document.getElementById('pid-chart').getContext('2d');
+            pidChart = new Chart(pidCtx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Process Value',
+                        data: [],
+                        borderColor: '#17a2b8',
+                        backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 1,
+                        tension: 0.1,
+                        fill: false
+                    }, {
+                        label: 'Setpoint',
+                        data: [],
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0,
+                        borderDash: [5, 5],
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 0
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                color: '#6c757d'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Time (s)',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Value (V)',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Live Data Chart
+            const liveCtx = document.getElementById('live-chart').getContext('2d');
+            liveChart = new Chart(liveCtx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Voltage',
+                        data: [],
+                        borderColor: '#0066cc',
+                        backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 1,
+                        tension: 0.1,
+                        fill: false
+                    }, {
+                        label: 'Current',
+                        data: [],
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 1,
+                        tension: 0.1,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 0
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                color: '#6c757d'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Time (s)',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Value',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // MQTT Functions
+        function toggleConnection() {
+            if (isConnected) {
+                disconnectMQTT();
+            } else {
+                connectMQTT();
+            }
+        }
+
+        function connectMQTT() {
+            if (!isConnected) {
+                const brokerUrlInput = document.getElementById('broker-url');
+                const brokerUrl = brokerUrlInput.value.trim() || 'wss://test.mosquitto.org:8081/mqtt';
+                
+                try {
+                    client = new Paho.MQTT.Client(brokerUrl, sessionId);
+                    
+                    client.onConnectionLost = function(responseObject) {
+                        console.log('Connection lost:', responseObject.errorMessage);
+                        updateConnectionStatus('Reconnecting...');
+                        isConnected = false;
+                        updateConnectButton('Connect');
+                    };
+
+                    client.onMessageArrived = function(message) {
+                        try {
+                            const payload = message.payloadString;
+                            console.log('MQTT message received:', payload);
+                            handleMessage(payload);
+                            addMessageToLog('received', payload);
+                        } catch (error) {
+                            console.error('Error parsing MQTT message:', error);
+                        }
+                    };
+
+                    client.connect({
+                        onSuccess: function() {
+                            isConnected = true;
+                            updateConnectionStatus('Connected');
+                            updateConnectButton('Disconnect');
+                            console.log('MQTT connected successfully');
+                            addMessageToLog('received', 'Connected to MQTT broker');
+                        },
+                        onFailure: function(responseObject) {
+                            console.error('MQTT connection failed:', responseObject.errorMessage);
+                            updateConnectionStatus('Connection Failed');
+                            updateConnectButton('Connect');
+                            addMessageToLog('received', 'Connection failed: ' + responseObject.errorMessage);
+                        },
+                        useSSL: brokerUrl.startsWith('wss://'),
+                        cleanSession: true,
+                        reconnectPeriod: 5,
+                        timeout: 10
+                    });
+                } catch (error) {
+                    console.error('Error creating MQTT client:', error);
+                    updateConnectionStatus('Error');
+                    addMessageToLog('received', 'Error: ' + error.message);
+                }
+            }
+        }
+
+        function disconnectMQTT() {
+            if (isConnected && client) {
+                isConnected = false;
+                client.disconnect();
+                updateConnectionStatus('Disconnected');
+                updateConnectButton('Connect');
+                console.log('MQTT disconnected');
+                addMessageToLog('received', 'Disconnected from MQTT broker');
+            }
+        }
+
+        function sendCommand(command) {
+            if (isConnected && client) {
+                const message = new Paho.MQTT.Message(command);
+                message.destinationName = `stm32lab/${sessionId}/cmds`;
+                client.send(message);
+                console.log('Command sent:', command);
+                addMessageToLog('sent', command);
+            } else {
+                console.log('Not connected - command not sent:', command);
+                addMessageToLog('received', 'Not connected - command not sent: ' + command);
+            }
+        }
+
+        function sendCustomCommand() {
+            const customCommand = document.getElementById('custom-command').value.trim();
+            if (customCommand) {
+                sendCommand(customCommand);
+                document.getElementById('custom-command').value = '';
+            }
+        }
+
+        function sendPIDCommand() {
+            const kp = document.getElementById('kp').value;
+            const ki = document.getElementById('ki').value;
+            const kd = document.getElementById('kd').value;
+            const sp = document.getElementById('setpoint').value;
+            
+            const command = `#PID:P=${kp},I=${ki},D=${kd},SP=${sp};`;
+            sendCommand(command);
+        }
+
+        function updateFunctionGenerator() {
+            const amplitude = document.getElementById('amplitude').value;
+            const offset = document.getElementById('offset').value;
+            const command = `#WAVE:PARAMS ${amplitude},${offset}`;
+            sendCommand(command);
+        }
+
+        // Message Handling
+        function handleMessage(payload) {
+            try {
+                const msg = payload.trim();
+                console.log('Processing message:', msg);
+
+                // Parse different message types
+                if (msg.startsWith('#DATA:')) {
+                    handleDataMessage(msg);
+                } else if (msg.startsWith('#DSO:')) {
+                    handleDSOMessage(msg);
+                } else if (msg.startsWith('#MM:')) {
+                    handleMultimeterMessage(msg);
+                } else if (msg.startsWith('#WAVE:')) {
+                    handleFunctionGeneratorMessage(msg);
+                } else if (msg.startsWith('#PID:')) {
+                    handlePIDMessage(msg);
+                } else if (msg.startsWith('#TEMP:')) {
+                    handleTemperatureMessage(msg);
+                } else if (msg.startsWith('#BOOST:')) {
+                    handleBoostMessage(msg);
+                }
+            } catch (error) {
+                console.error('Error handling message:', error);
+            }
+        }
+
+        function handleDataMessage(msg) {
+            const match = msg.match(/#DATA:M=([A-VDGR]),X=([\d.-]+)/);
+            if (match) {
+                const mode = match[1];
+                const value = parseFloat(match[2]);
+                const time = (Date.now() / 1000) % 10;
+                
+                // Update live data
+                if (dataStreamEnabled) {
+                    updateLiveData(mode, value, time);
+                }
+                
+                // Update specific charts based on mode
+                if (mode === 'D' && currentTab === 'oscilloscope') {
+                    updateOscilloscopeChart(time, value);
+                } else if (mode === 'V' && currentTab === 'multimeter') {
+                    updateMultimeterChart(time, value);
+                }
+            }
+        }
+
+        function handleDSOMessage(msg) {
+            const samples = msg.substring(5).split(',').map(parseFloat);
+            if (samples.length > 0 && currentTab === 'oscilloscope') {
+                updateOscilloscopeDSO(samples);
+                updateDSOStats(samples);
+            }
+        }
+
+        function handleMultimeterMessage(msg) {
+            const match = msg.match(/#DATA:M=([A-VDRG]),X=([\d.-]+)/);
+            if (match && currentTab === 'multimeter') {
+                const mode = match[1];
+                const value = parseFloat(match[2]);
+                const time = (Date.now() / 1000) % 10;
+                
+                updateMultimeterValue(mode, value);
+                updateMultimeterChart(time, value);
+            }
+        }
+
+        function handleFunctionGeneratorMessage(msg) {
+            if (currentTab === 'function') {
+                // Parse frequency
+                const freqMatch = msg.match(/#WAVE:F=([\d.]+)/);
+                if (freqMatch) {
+                    const freq = parseFloat(freqMatch[1]);
+                    updateFunctionGeneratorStatus('frequency', freq);
+                }
+
+                // Parse waveform
+                if (msg.includes('SQ')) {
+                    updateFunctionGeneratorStatus('waveform', 'Square');
+                } else if (msg.includes('SI')) {
+                    updateFunctionGeneratorStatus('waveform', 'Sine');
+                } else if (msg.includes('TR')) {
+                    updateFunctionGeneratorStatus('waveform', 'Triangle');
+                }
+
+                // Parse amplitude
+                const ampMatch = msg.match(/#WAVE:PARAMS ([\d.-]+),/);
+                if (ampMatch) {
+                    const amplitude = parseFloat(ampMatch[1]);
+                    updateFunctionGeneratorStatus('amplitude', amplitude);
+                }
+
+                // Parse status
+                if (msg.includes('ON')) {
+                    updateFunctionGeneratorStatus('output', 'ON');
+                } else if (msg.includes('OFF')) {
+                    updateFunctionGeneratorStatus('output', 'OFF');
+                }
+            }
+        }
+
+        function handlePIDMessage(msg) {
+            if (currentTab === 'pid') {
+                // Parse PID data
+                const pvMatch = msg.match(/#PID:PV=([\d.]+)/);
+                if (pvMatch) {
+                    const pv = parseFloat(pvMatch[1]);
+                    updatePIDStatus('pv', pv);
+                }
+
+                const spMatch = msg.match(/#PID:SP=([\d.]+)/);
+                if (spMatch) {
+                    const sp = parseFloat(spMatch[1]);
+                    updatePIDStatus('sp', sp);
+                }
+
+                const outputMatch = msg.match(/#PID:O=([\d.]+)/);
+                if (outputMatch) {
+                    const output = parseFloat(outputMatch[1]);
+                    updatePIDStatus('output', output);
+                }
+
+                const errorMatch = msg.match(/#PID:E=([\d.]+)/);
+                if (errorMatch) {
+                    const error = parseFloat(errorMatch[1]);
+                    updatePIDStatus('error', error);
+                }
+            }
+        }
+
+        function handleTemperatureMessage(msg) {
+            const match = msg.match(/#TEMP:T=([\d.]+)/);
+            if (match) {
+                const temp = parseFloat(match[1]);
+                updateLiveData('temperature', temp, Date.now() / 1000);
+            }
+        }
+
+        function handleBoostMessage(msg) {
+            const match = msg.match(/#BOOST:V=([\d.]+)/);
+            if (match) {
+                const boost = parseFloat(match[1]);
+                updateLiveData('boost', boost, Date.now() / 1000);
+            }
+        }
+
+        // Chart Update Functions
+        function updateOscilloscopeChart(time, value) {
+            oscilloscopeData.push({x: time, y: value});
+            if (oscilloscopeData.length > maxDataPoints) {
+                oscilloscopeData.shift();
+            }
+            oscilloscopeChart.data.datasets[0].data = oscilloscopeData;
+            oscilloscopeChart.update('none');
+        }
+
+        function updateOscilloscopeDSO(samples) {
+            const data = samples.map((value, index) => ({
+                x: index * 0.01,
+                y: value
+            }));
+            oscilloscopeChart.data.datasets[0].data = data;
+            oscilloscopeChart.update('none');
+        }
+
+        function updateMultimeterChart(time, value) {
+            multimeterData.push({x: time, y: value});
+            if (multimeterData.length > maxDataPoints) {
+                multimeterData.shift();
+            }
+            multimeterChart.data.datasets[0].data = multimeterData;
+            multimeterChart.update('none');
+        }
+
+        function updateFunctionChart(time, value) {
+            functionData.push({x: time, y: value});
+            if (functionData.length > maxDataPoints) {
+                functionData.shift();
+            }
+            functionChart.data.datasets[0].data = functionData;
+            functionChart.update('none');
+        }
+
+        function updatePIDChart(time, pv, sp) {
+            if (!pidData.pv) pidData.pv = [];
+            if (!pidData.sp) pidData.sp = [];
+            
+            pidData.pv.push({x: time, y: pv});
+            pidData.sp.push({x: time, y: sp});
+            
+            if (pidData.pv.length > maxDataPoints) {
+                pidData.pv.shift();
+                pidData.sp.shift();
+            }
+            
+            pidChart.data.datasets[0].data = pidData.pv;
+            pidChart.data.datasets[1].data = pidData.sp;
+            pidChart.update('none');
+        }
+
+        function updateLiveDataChart() {
+            if (liveData.voltage && liveData.voltage.length > 0) {
+                liveChart.data.datasets[0].data = liveData.voltage;
+            }
+            if (liveData.current && liveData.current.length > 0) {
+                liveChart.data.datasets[1].data = liveData.current;
+            }
+            liveChart.update('none');
+        }
+
+        // Status Update Functions
+        function updateLiveData(mode, value, time) {
+            if (!liveData[mode]) liveData[mode] = [];
+            
+            liveData[mode].push({x: time, y: value});
+            if (liveData[mode].length > maxDataPoints) {
+                liveData[mode].shift();
+            }
+            
+            // Update display
+            const element = document.getElementById(`live-${mode}`);
+            if (element) {
+                const valueElement = element.querySelector('.value-number');
+                if (valueElement) {
+                    valueElement.textContent = value.toFixed(3);
+                    element.classList.add('updating');
+                    setTimeout(() => element.classList.remove('updating'), 300);
+                }
+            }
+            
+            updateLiveDataChart();
+        }
+
+        function updateMultimeterValue(mode, value) {
+            const element = document.getElementById('meter-value');
+            if (element) {
+                element.textContent = value.toFixed(3);
+                
+                // Update unit
+                const unitElement = document.getElementById('meter-unit');
+                if (unitElement) {
+                    const units = {
+                        'V': 'V',
+                        'A': 'A',
+                        'R': 'Ω',
+                        'F': 'Hz',
+                        'C': 'F'
+                    };
+                    unitElement.textContent = units[mode] || '';
+                }
+            }
+            
+            // Update statistics
+            updateMultimeterStats(value);
+        }
+
+        function updateMultimeterStats(value) {
+            if (!this.multimeterStats) {
+                this.multimeterStats = { min: value, max: value, sum: value, count: 1 };
+            } else {
+                this.multimeterStats.min = Math.min(this.multimeterStats.min, value);
+                this.multimeterStats.max = Math.max(this.multimeterStats.max, value);
+                this.multimeterStats.sum += value;
+                this.multimeterStats.count++;
+            }
+            
+            const avg = this.multimeterStats.sum / this.multimeterStats.count;
+            
+            document.getElementById('meter-min').textContent = this.multimeterStats.min.toFixed(3);
+            document.getElementById('meter-max').textContent = this.multimeterStats.max.toFixed(3);
+            document.getElementById('meter-avg').textContent = avg.toFixed(3);
+            document.getElementById('meter-count').textContent = this.multimeterStats.count;
+        }
+
+        function updateDSOStats(samples) {
+            const vrms = Math.sqrt(samples.reduce((sum, val) => sum + val * val, 0) / samples.length);
+            const vpp = Math.max(...samples) - Math.min(...samples);
+            
+            document.getElementById('dso-vrms').querySelector('.value-number').textContent = vrms.toFixed(3);
+            document.getElementById('dso-vpp').querySelector('.value-number').textContent = vpp.toFixed(3);
+            document.getElementById('dso-samples').querySelector('.value-number').textContent = samples.length;
+        }
+
+        function updateFunctionGeneratorStatus(type, value) {
+            const element = document.getElementById(`fg-${type}`);
+            if (element) {
+                const valueElement = element.querySelector('.value-number');
+                if (valueElement) {
+                    if (typeof value === 'number') {
+                        valueElement.textContent = value.toFixed(3);
+                    } else {
+                        valueElement.textContent = value;
+                    }
+                    element.classList.add('updating');
+                    setTimeout(() => element.classList.remove('updating'), 300);
+                }
+            }
+        }
+
+        function updatePIDStatus(type, value) {
+            const element = document.getElementById(`pid-${type}`);
+            if (element) {
+                const valueElement = element.querySelector('.value-number');
+                if (valueElement) {
+                    valueElement.textContent = value.toFixed(3);
+                    element.classList.add('updating');
+                    setTimeout(() => element.classList.remove('updating'), 300);
+                }
+            }
+            
+            // Update PID chart
+            if (type === 'pv' && this.pidData && this.pidData.sp && this.pidData.sp.length > 0) {
+                const lastSp = this.pidData.sp[this.pidData.sp.length - 1];
+                updatePIDChart(Date.now() / 1000, value, lastSp.y);
+            }
+        }
+
+        // UI Functions
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(pane => {
+                pane.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            const selectedTab = document.getElementById(tabName);
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+            }
+            
+            // Add active class to selected button
+            event.target.classList.add('active');
+            
+            currentTab = tabName;
+        }
+
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connection-status');
+            const statusDot = document.getElementById('status-dot');
+            
+            if (statusElement) {
+                statusElement.textContent = status;
+            }
+            
+            if (statusDot) {
+                statusDot.className = 'status-dot';
+                if (status === 'Connected') {
+                    statusDot.classList.add('connected');
+                } else if (status === 'Connecting' || status === 'Reconnecting') {
+                    statusDot.classList.add('connecting');
+                }
+            }
+        }
+
+        function updateConnectButton(text) {
+            const btn = document.getElementById('connect-btn');
+            if (btn) {
+                btn.textContent = text === 'Connect' ? 'Connect to Broker' : 'Disconnect';
+                btn.className = text === 'Connect' ? 'btn btn-primary' : 'btn btn-danger';
+            }
+        }
+
+        function addMessageToLog(type, message) {
+            const logElement = document.getElementById('message-log');
+            if (logElement) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${type}`;
+                messageDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                logElement.appendChild(messageDiv);
+                logElement.scrollTop = logElement.scrollHeight;
+                
+                // Keep only last 50 messages
+                while (logElement.children.length > 50) {
+                    logElement.removeChild(logElement.firstChild);
+                }
+            }
+        }
+
+        function toggleDataStream() {
+            dataStreamEnabled = !dataStreamEnabled;
+            addMessageToLog('received', `Data stream ${dataStreamEnabled ? 'enabled' : 'disabled'}`);
+        }
+
+        function clearLiveData() {
+            oscilloscopeData = [];
+            multimeterData = [];
+            functionData = [];
+            pidData = { pv: [], sp: [] };
+            liveData = {};
+            
+            // Clear charts
+            oscilloscopeChart.data.datasets[0].data = [];
+            multimeterChart.data.datasets[0].data = [];
+            functionChart.data.datasets[0].data = [];
+            pidChart.data.datasets[0].data = [];
+            pidChart.data.datasets[1].data = [];
+            liveChart.data.datasets[0].data = [];
+            liveChart.data.datasets[1].data = [];
+            
+            // Update charts
+            oscilloscopeChart.update('none');
+            multimeterChart.update('none');
+            functionChart.update('none');
+            pidChart.update('none');
+            liveChart.update('none');
+            
+            addMessageToLog('received', 'All data cleared');
+        }
+
+        function exportLiveData() {
+            let csv = 'Time,Voltage,Current,Resistance,Frequency,Temperature,Boost\n';
+            
+            // Find the longest dataset
+            let maxLength = 0;
+            for (let key in liveData) {
+                if (liveData[key].length > maxLength) {
+                    maxLength = liveData[key].length;
+                }
+            }
+            
+            for (let i = 0; i < maxLength; i++) {
+                const time = liveData.voltage && liveData.voltage[i] ? liveData.voltage[i].x : '';
+                const voltage = liveData.voltage && liveData.voltage[i] ? liveData.voltage[i].y : '';
+                const current = liveData.current && liveData.current[i] ? liveData.current[i].y : '';
+                const resistance = liveData.resistance && liveData.resistance[i] ? liveData.resistance[i].y : '';
+                const frequency = liveData.frequency && liveData.frequency[i] ? liveData.frequency[i].y : '';
+                const temperature = liveData.temperature && liveData.temperature[i] ? liveData.temperature[i].y : '';
+                const boost = liveData.boost && liveData.boost[i] ? liveData.boost[i].y : '';
+                
+                csv += `${time},${voltage},${current},${resistance},${frequency},${temperature},${boost}\n`;
+            }
+            
+            // Create download link
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `stm32_data_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            addMessageToLog('received', 'Data exported to CSV');
+        }
+
+        // Mobile optimizations
+        document.addEventListener('gesturestart', function(e) {
+            if (e.scale !== 1) {
+                e.preventDefault();
+            }
+        });
+
+        // Add touch feedback
+        document.querySelectorAll('.btn, .tab-button').forEach(element => {
+            element.addEventListener('touchstart', function() {
+                this.style.transform = 'scale(0.95)';
+            });
+            
+            element.addEventListener('touchend', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+
+        // Auto-connect on page load (optional)
+        // setTimeout(() => {
+        //     connectMQTT();
+        // }, 1000);
+    </script>
+</body>
+</html>
