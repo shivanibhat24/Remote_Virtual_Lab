@@ -227,18 +227,18 @@ class MainWindow(QMainWindow):
         self._apply_os_theme()
         self._override_theme_from_settings()
 
-        # Serial auto-detect: only autoconnect if STM32 device is detected
+        # Serial auto-detect: only autoconnect if USB device is detected
         last_port = self._settings.get("last_port", "")
         if last_port:
             idx = self.tab_conn.cmb_port.findText(last_port)
             if idx >= 0:
                 self.tab_conn.cmb_port.setCurrentIndex(idx)
-                # Only autoconnect if it's actually an STM32 device
+                # Only autoconnect if it's actually a USB device
                 if self._is_stm32_device(last_port):
-                    self.tab_conn.log(f"STM32 device detected on {last_port}, connecting...", T.PRIMARY)
+                    self.tab_conn.log(f"USB device detected on {last_port}, connecting...", T.PRIMARY)
                     self._on_connect(last_port)
                 else:
-                    self.tab_conn.log(f"Last port {last_port} is not an STM32 device", T.TEXT_MUTED)
+                    self.tab_conn.log(f"Last port {last_port} is not a USB device", T.TEXT_MUTED)
 
         # Status bar clock
         self._sb_timer = QTimer()
@@ -794,7 +794,7 @@ class MainWindow(QMainWindow):
             self.tab_conn.log(f"Auto-reconnect: Port {self._auto_reconnect_port} no longer available", T.ACCENT_AMBER)
             return
         
-        # Additional check: verify it's actually an STM32 board by checking VID/PID
+        # Additional check: verify it's a USB device by checking VID/PID
         try:
             port_info = None
             for p in serial.tools.list_ports.comports():
@@ -803,15 +803,16 @@ class MainWindow(QMainWindow):
                     break
             
             if port_info:
-                # Check for common STM32 VID/PID combinations
-                stm32_vids = [0x0483, 0x2341, 0x2A03]  # STMicroelectronics, Arduino, etc.
-                is_stm32 = port_info.vid in stm32_vids or ('STM32' in port_info.description.upper() or 
-                                                            'STLINK' in port_info.description.upper() or
-                                                            'COM PORT' in port_info.description.upper())
+                # Allow any USB device (check if it's a USB serial device)
+                is_usb_device = port_info.vid is not None and port_info.vid != 0
                 
-                if not is_stm32:
+                # Also check common USB serial device identifiers
+                usb_identifiers = ['USB', 'SERIAL', 'CH340', 'CP210', 'FTDI', 'PL2303', 'CDC', 'ACM']
+                has_usb_identifier = any(identifier in port_info.description.upper() for identifier in usb_identifiers)
+                
+                if not (is_usb_device or has_usb_identifier):
                     self._auto_reconnect_timer.stop()
-                    self.tab_conn.log(f"Auto-reconnect: {self._auto_reconnect_port} is not an STM32 device", T.ACCENT_AMBER)
+                    self.tab_conn.log(f"Auto-reconnect: {self._auto_reconnect_port} is not a USB device", T.ACCENT_AMBER)
                     return
             
             # Try to connect with timeout verification
@@ -856,7 +857,7 @@ class MainWindow(QMainWindow):
 
     def _refresh_ports(self):
         ports = SerialManager.list_ports()
-        # Filter out non-STM32 devices and add descriptive names
+        # Filter and add descriptive names for all USB devices
         filtered_ports = []
         for port in ports:
             try:
@@ -867,19 +868,20 @@ class MainWindow(QMainWindow):
                         break
                 
                 if port_info:
-                    # Check for common STM32 VID/PID combinations
-                    stm32_vids = [0x0483, 0x2341, 0x2A03]  # STMicroelectronics, Arduino, etc.
-                    is_stm32 = (port_info.vid in stm32_vids or 
-                              'STM32' in port_info.description.upper() or 
-                              'STLINK' in port_info.description.upper() or
-                              'COM PORT' in port_info.description.upper())
+                    # Allow any USB device (check if it's a USB serial device)
+                    is_usb_device = port_info.vid is not None and port_info.vid != 0
                     
-                    if is_stm32:
-                        # Add descriptive name
+                    # Also check common USB serial device identifiers
+                    usb_identifiers = ['USB', 'SERIAL', 'CH340', 'CP210', 'FTDI', 'PL2303', 'CDC', 'ACM', 
+                                     'STM32', 'STLINK', 'ARDUINO', 'ESP32', 'ESP8266']
+                    has_usb_identifier = any(identifier in port_info.description.upper() for identifier in usb_identifiers)
+                    
+                    if is_usb_device or has_usb_identifier:
+                        # Add descriptive name for USB devices
                         desc = f"{port} - {port_info.description}"
                         filtered_ports.append(desc)
                     else:
-                        # Still add the port but mark it as non-STM32
+                        # Still add the port but mark it as non-USB
                         filtered_ports.append(port)
                 else:
                     filtered_ports.append(port)
@@ -889,7 +891,7 @@ class MainWindow(QMainWindow):
         self.tab_conn.update_ports(filtered_ports)
 
     def _is_stm32_device(self, port: str) -> bool:
-        """Check if the connected device is actually an STM32 board."""
+        """Check if the connected device is a USB device (allow any USB device)."""
         try:
             port_info = None
             for p in serial.tools.list_ports.comports():
@@ -900,14 +902,15 @@ class MainWindow(QMainWindow):
             if not port_info:
                 return False
             
-            # Check for common STM32 VID/PID combinations
-            stm32_vids = [0x0483, 0x2341, 0x2A03]  # STMicroelectronics, Arduino, etc.
-            is_stm32 = (port_info.vid in stm32_vids or 
-                      'STM32' in port_info.description.upper() or 
-                      'STLINK' in port_info.description.upper() or
-                      'COM PORT' in port_info.description.upper())
+            # Allow any USB device (check if it's a USB serial device)
+            # USB devices typically have VID (Vendor ID) set
+            is_usb_device = port_info.vid is not None and port_info.vid != 0
             
-            return is_stm32
+            # Also check common USB serial device identifiers
+            usb_identifiers = ['USB', 'SERIAL', 'CH340', 'CP210', 'FTDI', 'PL2303', 'CDC', 'ACM']
+            has_usb_identifier = any(identifier in port_info.description.upper() for identifier in usb_identifiers)
+            
+            return is_usb_device or has_usb_identifier
         except:
             return False
 

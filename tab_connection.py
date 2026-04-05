@@ -121,15 +121,15 @@ class ConnectionTab(QWidget):
         # Extract actual port name from descriptive text
         port = port_text.split(' - ')[0] if ' - ' in port_text else port_text
         
-        # Validate it's an STM32 device
-        if not self._is_stm32_device(port):
-            self.log(f"Port {port} is not a recognized STM32 device", T.ACCENT_AMBER)
+        # Validate it's a USB device
+        if not self._is_usb_device(port):
+            self.log(f"Port {port} is not a recognized USB device", T.ACCENT_AMBER)
             return
         
         self.connect_requested.emit(port)
     
-    def _is_stm32_device(self, port: str) -> bool:
-        """Check if the connected device is actually an STM32 board."""
+    def _is_usb_device(self, port: str) -> bool:
+        """Check if the connected device is a USB device."""
         try:
             import serial.tools.list_ports
             port_info = None
@@ -141,14 +141,15 @@ class ConnectionTab(QWidget):
             if not port_info:
                 return False
             
-            # Check for common STM32 VID/PID combinations
-            stm32_vids = [0x0483, 0x2341, 0x2A03]  # STMicroelectronics, Arduino, etc.
-            is_stm32 = (port_info.vid in stm32_vids or 
-                      'STM32' in port_info.description.upper() or 
-                      'STLINK' in port_info.description.upper() or
-                      'COM PORT' in port_info.description.upper())
+            # Allow any USB device (check if it's a USB serial device)
+            is_usb_device = port_info.vid is not None and port_info.vid != 0
             
-            return is_stm32
+            # Also check common USB serial device identifiers
+            usb_identifiers = ['USB', 'SERIAL', 'CH340', 'CP210', 'FTDI', 'PL2303', 'CDC', 'ACM', 
+                             'STM32', 'STLINK', 'ARDUINO', 'ESP32', 'ESP8266']
+            has_usb_identifier = any(identifier in port_info.description.upper() for identifier in usb_identifiers)
+            
+            return is_usb_device or has_usb_identifier
         except:
             return False
 
