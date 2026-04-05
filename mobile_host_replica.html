@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>STM32 Lab - Mobile Interface</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --BG_PRIMARY: #ffffff;
+            --BG_DARK: #1a1a1a;
+            --BG_CARD: #f8f9fa;
+            --BG_CARD_DARK: #2d2d2d;
+            --BORDER_COLOR: #dee2e6;
+            --BORDER_DARK: #4a5568;
+            --TEXT_PRIMARY: #212529;
+            --TEXT_DARK: #e2e8f0;
+            --TEXT_MUTED: #6c757d;
+            --TEXT_MUTED_DARK: #a0aec0;
+            --PRIMARY_COLOR: #0066cc;
+            --PRIMARY_DARK: #3182ce;
+            --SUCCESS_COLOR: #28a745;
+            --SUCCESS_DARK: #38a169;
+            --DANGER_COLOR: #dc3545;
+            --DANGER_DARK: #e53e3e;
+            --WARNING_COLOR: #ffc107;
+            --WARNING_DARK: #f59e0b;
+            --INFO_COLOR: #17a2b8;
+            --INFO_DARK: #3182ce;
+            --FONT_FAMILY: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --FONT_MONO: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --BG_PRIMARY: var(--BG_DARK);
+                --BG_CARD: var(--BG_CARD_DARK);
+                --BORDER_COLOR: var(--BORDER_DARK);
+                --TEXT_PRIMARY: var(--TEXT_DARK);
+                --TEXT_MUTED: var(--TEXT_MUTED_DARK);
+                --PRIMARY_COLOR: var(--PRIMARY_DARK);
+                --SUCCESS_COLOR: var(--SUCCESS_DARK);
+                --DANGER_COLOR: var(--DANGER_DARK);
+                --WARNING_COLOR: var(--WARNING_DARK);
+                --INFO_COLOR: var(--INFO_DARK);
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--FONT_FAMILY);
+            background: var(--BG_PRIMARY);
+            color: var(--TEXT_PRIMARY);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 100%;
+            padding: 16px;
+            margin: 0 auto;
+        }
+
+        /* Header Strip - Matches Python GUI */
+        .header-strip {
+            background: linear-gradient(135deg, var(--PRIMARY_COLOR), var(--PRIMARY_DARK));
+            color: white;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.2);
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .header-subtitle {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        /* Connection Panel - Matches Python Connection Tab */
+        .connection-panel {
+            background: var(--BG_CARD);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .panel-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--PRIMARY_COLOR);
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: var(--BG_PRIMARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--DANGER_COLOR);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: var(--SUCCESS_COLOR);
+        }
+
+        .status-dot.connecting {
+            background: var(--WARNING_COLOR);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--TEXT_PRIMARY);
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--TEXT_MUTED);
+            margin-bottom: 8px;
+        }
+
+        .input-control {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 1rem;
+            border: 2px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            background: var(--BG_PRIMARY);
+            color: var(--TEXT_PRIMARY);
+            transition: all 0.2s ease;
+            font-family: var(--FONT_MONO);
+            text-align: center;
+            letter-spacing: 0.1em;
+        }
+
+        .input-control:focus {
+            outline: none;
+            border-color: var(--PRIMARY_COLOR);
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            margin-bottom: 12px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-primary {
+            background: var(--PRIMARY_COLOR);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0052a3;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 102, 204, 0.2);
+        }
+
+        .btn-danger {
+            background: var(--DANGER_COLOR);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(220, 53, 69, 0.2);
+        }
+
+        .btn-secondary {
+            background: var(--BG_CARD);
+            color: var(--TEXT_PRIMARY);
+            border: 2px solid var(--BORDER_COLOR);
+        }
+
+        .btn-secondary:hover {
+            background: var(--BORDER_COLOR);
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Tab Navigation - Matches Python GUI */
+        .tab-nav {
+            display: flex;
+            background: var(--BG_CARD);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 12px;
+            padding: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--TEXT_MUTED);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            min-width: 80px;
+        }
+
+        .tab-btn.active {
+            background: var(--PRIMARY_COLOR);
+            color: white;
+            box-shadow: 0 4px 8px rgba(0, 102, 204, 0.2);
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: var(--BORDER_COLOR);
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            background: var(--BG_CARD);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Board Cards - Matches Python GUI */
+        .board-card {
+            background: var(--BG_PRIMARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: all 0.2s ease;
+        }
+
+        .board-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--BORDER_COLOR);
+        }
+
+        .control-group {
+            margin-bottom: 16px;
+        }
+
+        .control-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--TEXT_MUTED);
+            margin-bottom: 8px;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .value-display {
+            background: var(--BG_CARD);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .value-display:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .value-number {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--PRIMARY_COLOR);
+            font-family: var(--FONT_MONO);
+        }
+
+        .value-unit {
+            font-size: 0.875rem;
+            color: var(--TEXT_MUTED);
+            font-weight: 500;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .status-item {
+            background: var(--BG_CARD);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .status-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .status-label {
+            font-size: 0.75rem;
+            color: var(--TEXT_MUTED);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .status-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            font-family: var(--FONT_MONO);
+        }
+
+        /* Range Input Styling */
+        .range-input {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: var(--BORDER_COLOR);
+            outline: none;
+            -webkit-appearance: none;
+            margin-bottom: 8px;
+        }
+
+        .range-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--PRIMARY_COLOR);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.3);
+        }
+
+        .range-input::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--PRIMARY_COLOR);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.3);
+        }
+
+        /* Message Log */
+        .message-log {
+            background: var(--BG_CARD);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 12px;
+            padding: 16px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: var(--FONT_MONO);
+            font-size: 0.875rem;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .message {
+            margin-bottom: 4px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            background: var(--BG_PRIMARY);
+            color: var(--TEXT_PRIMARY);
+        }
+
+        .message.sent {
+            background: var(--PRIMARY_COLOR);
+            color: white;
+        }
+
+        .message.received {
+            background: var(--SUCCESS_COLOR);
+            color: white;
+        }
+
+        .message.error {
+            background: var(--DANGER_COLOR);
+            color: white;
+        }
+
+        .message.info {
+            background: var(--INFO_COLOR);
+            color: white;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+            }
+            
+            .tab-nav {
+                flex-wrap: wrap;
+            }
+            
+            .tab-btn {
+                flex: 1 1 auto;
+                min-width: 100px;
+            }
+            
+            .button-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .status-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 8px;
+            }
+            
+            .connection-panel,
+            .tab-content,
+            .board-card,
+            .message-log {
+                padding: 16px;
+            }
+            
+            .button-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tab-btn {
+                font-size: 0.75rem;
+                padding: 8px 12px;
+            }
+        }
+
+        /* Touch Optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .btn, .input-control, .tab-btn {
+                min-height: 44px;
+                min-width: 44px;
+            }
+        }
+
+        /* Prevent zoom on mobile */
+        @media (max-width: 768px) {
+            body {
+                -ms-text-size-adjust: 100%;
+                -webkit-text-size-adjust: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Strip -->
+        <div class="header-strip">
+            <div class="header-title">STM32 Lab - Mobile Interface</div>
+            <div class="header-subtitle">Remote control with session-based connection</div>
+        </div>
+
+        <!-- Connection Panel -->
+        <div class="connection-panel">
+            <div class="panel-title">Connection Manager</div>
+            <div class="connection-status">
+                <div class="status-dot" id="status-dot"></div>
+                <span class="status-text" id="connection-status">Ready to Connect</span>
+            </div>
+            
+            <div class="input-group">
+                <label class="input-label" for="session-id">Session ID (from desktop app)</label>
+                <input type="text" id="session-id" class="input-control" 
+                       placeholder="X9T4K2" maxlength="6" value="X9T4K2">
+            </div>
+            
+            <button class="btn btn-primary" id="connect-btn" onclick="toggleConnection()">Connect</button>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav" id="tab-nav" style="display: none;">
+            <button class="tab-btn active" onclick="switchTab('voltmeter')">Voltmeter</button>
+            <button class="tab-btn" onclick="switchTab('ammeter')">Ammeter</button>
+            <button class="tab-btn" onclick="switchTab('dso')">DSO</button>
+            <button class="tab-btn" onclick="switchTab('wavegen')">Wavegen</button>
+            <button class="tab-btn" onclick="switchTab('power')">Power</button>
+            <button class="tab-btn" onclick="switchTab('pid')">PID</button>
+        </div>
+
+        <!-- Voltmeter Tab -->
+        <div class="tab-content active" id="voltmeter-tab">
+            <div class="board-card">
+                <div class="card-title">Voltmeter</div>
+                <div class="control-group">
+                    <label class="control-label">Range Selection</label>
+                    <div class="button-grid">
+                        <button class="btn btn-secondary" onclick="sendCommand('#RANGE:V=12')">12V</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#RANGE:V=16')">16V</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#RANGE:V=24')">24V</button>
+                    </div>
+                </div>
+                <div class="value-display">
+                    <div class="value-number" id="voltmeter-value">0.000</div>
+                    <div class="value-unit">V</div>
+                </div>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">Min</div>
+                        <div class="status-value" id="voltmeter-min">0.000</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Max</div>
+                        <div class="status-value" id="voltmeter-max">0.000</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Avg</div>
+                        <div class="status-value" id="voltmeter-avg">0.000</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Samples</div>
+                        <div class="status-value" id="voltmeter-count">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ammeter Tab -->
+        <div class="tab-content" id="ammeter-tab">
+            <div class="board-card">
+                <div class="card-title">Ammeter</div>
+                <div class="control-group">
+                    <label class="control-label">Range Selection</label>
+                    <div class="button-grid">
+                        <button class="btn btn-secondary" onclick="sendCommand('#RANGE:A=100')">100mA</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#RANGE:A=200')">200mA</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#RANGE:A=500')">500mA</button>
+                    </div>
+                </div>
+                <div class="value-display">
+                    <div class="value-number" id="ammeter-value">0.000</div>
+                    <div class="value-unit">mA</div>
+                </div>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">Min</div>
+                        <div class="status-value" id="ammeter-min">0.000</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Max</div>
+                        <div class="status-value" id="ammeter-max">0.000</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Avg</div>
+                        <div class="status-value" id="ammeter-avg">0.000</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Samples</div>
+                        <div class="status-value" id="ammeter-count">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DSO Tab -->
+        <div class="tab-content" id="dso-tab">
+            <div class="board-card">
+                <div class="card-title">Digital Storage Oscilloscope</div>
+                <div class="control-group">
+                    <label class="control-label">Trigger Mode</label>
+                    <div class="button-grid">
+                        <button class="btn btn-secondary" onclick="sendCommand('#TRIG:AUTO')">Auto</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#TRIG:NORMAL')">Normal</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#TRIG:SINGLE')">Single</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Timebase</label>
+                    <div class="button-grid">
+                        <button class="btn btn-secondary" onclick="sendCommand('#TIME:0.001')">0.001ms</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#TIME:0.01')">0.01ms</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#TIME:0.1')">0.1ms</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Trigger Level</label>
+                    <input type="range" id="trigger-level" class="range-input" min="0" max="5" step="0.1" value="2.5">
+                    <div class="value-display">
+                        <div class="value-number" id="trigger-level-value">2.5V</div>
+                    </div>
+                </div>
+                <div class="button-grid">
+                    <button class="btn btn-primary" onclick="sendCommand('#TRIG:LEVEL=2.5')">Set Trigger Level</button>
+                </div>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">Mode</div>
+                        <div class="status-value" id="dso-mode">Auto</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Trigger</div>
+                        <div class="status-value" id="dso-trigger">Auto</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Timebase</div>
+                        <div class="status-value" id="dso-timebase">0.01ms</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Samples</div>
+                        <div class="status-value" id="dso-samples">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wavegen Tab -->
+        <div class="tab-content" id="wavegen-tab">
+            <div class="board-card">
+                <div class="card-title">Function Generator</div>
+                <div class="control-group">
+                    <label class="control-label">Waveform</label>
+                    <div class="button-grid">
+                        <button class="btn btn-secondary" onclick="sendCommand('#WAVE:SQ')">Square</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#WAVE:SI')">Sine</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#WAVE:TR')">Triangle</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Frequency</label>
+                    <input type="range" id="frequency" class="range-input" min="1" max="100000" step="1" value="1000">
+                    <div class="value-display">
+                        <div class="value-number" id="frequency-value">1000Hz</div>
+                    </div>
+                    <div class="button-grid">
+                        <button class="btn btn-secondary" onclick="setFrequency(100)">100Hz</button>
+                        <button class="btn btn-secondary" onclick="setFrequency(1000)">1kHz</button>
+                        <button class="btn btn-secondary" onclick="setFrequency(10000)">10kHz</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Amplitude</label>
+                    <input type="range" id="amplitude" class="range-input" min="0" max="5" step="0.1" value="2.5">
+                    <div class="value-display">
+                        <div class="value-number" id="amplitude-value">2.5V</div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Offset</label>
+                    <input type="range" id="offset" class="range-input" min="-2.5" max="2.5" step="0.1" value="0">
+                    <div class="value-display">
+                        <div class="value-number" id="offset-value">0.0V</div>
+                    </div>
+                </div>
+                <div class="button-grid">
+                    <button class="btn btn-primary" onclick="updateFunctionGenerator()">Update Settings</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#WAVE:ON')">Enable</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#WAVE:OFF')">Disable</button>
+                </div>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">Waveform</div>
+                        <div class="status-value" id="waveform-status">Square</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Frequency</div>
+                        <div class="status-value" id="waveform-frequency">1000Hz</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Amplitude</div>
+                        <div class="status-value" id="waveform-amplitude">2.5V</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Status</div>
+                        <div class="status-value" id="waveform-status">OFF</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Power Tab -->
+        <div class="tab-content" id="power-tab">
+            <div class="board-card">
+                <div class="card-title">Power Control</div>
+                <div class="control-group">
+                    <label class="control-label">Voltage Regulator</label>
+                    <input type="range" id="voltage" class="range-input" min="0" max="12" step="0.1" value="5.0">
+                    <div class="value-display">
+                        <div class="value-number" id="voltage-value">5.0V</div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Boost Converter</label>
+                    <input type="range" id="boost" class="range-input" min="0" max="85" step="1" value="50">
+                    <div class="value-display">
+                        <div class="value-number" id="boost-value">50%</div>
+                    </div>
+                </div>
+                <div class="button-grid">
+                    <button class="btn btn-secondary" onclick="sendCommand('#VREG:ON')">VReg ON</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#VREG:OFF')">VReg OFF</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#BOOST:ON')">Boost ON</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#BOOST:OFF')">Boost OFF</button>
+                </div>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">VReg</div>
+                        <div class="status-value" id="vreg-status">OFF</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Boost</div>
+                        <div class="status-value" id="boost-status">OFF</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">VReg Set</div>
+                        <div class="status-value" id="vreg-set">5.0V</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Boost Set</div>
+                        <div class="status-value" id="boost-set">50%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PID Tab -->
+        <div class="tab-content" id="pid-tab">
+            <div class="board-card">
+                <div class="card-title">PID Control</div>
+                <div class="control-group">
+                    <label class="control-label">P (Proportional)</label>
+                    <input type="number" class="input-control" id="kp" value="1.0" step="0.1" min="0" max="100">
+                </div>
+                <div class="control-group">
+                    <label class="control-label">I (Integral)</label>
+                    <input type="number" class="input-control" id="ki" value="0.1" step="0.01" min="0" max="100">
+                </div>
+                <div class="control-group">
+                    <label class="control-label">D (Derivative)</label>
+                    <input type="number" class="input-control" id="kd" value="0.05" step="0.01" min="0" max="100">
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Setpoint</label>
+                    <input type="number" class="input-control" id="setpoint" value="5.0" step="0.1" min="0" max="12">
+                </div>
+                <div class="button-grid">
+                    <button class="btn btn-primary" onclick="sendPIDCommand()">Apply Gains</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#PID:START')">Start</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#PID:STOP')">Stop</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#PID:RESET')">Reset</button>
+                </div>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">Process Value</div>
+                        <div class="status-value" id="pid-pv">0.000</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Setpoint</div>
+                        <div class="status-value" id="pid-sp">5.000</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Output</div>
+                        <div class="status-value" id="pid-output">0.000</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Error</div>
+                        <div class="status-value" id="pid-error">0.000</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Log -->
+        <div class="message-log" id="message-log">
+            <div class="message">Session-based communication log will appear here...</div>
+        </div>
+    </div>
+
+    <script>
+        // WebSocket-based connection (no MQTT knowledge required)
+        let socket;
+        let isConnected = false;
+        let sessionId = 'X9T4K2';
+        let reconnectTimer = null;
+        let currentTab = 'voltmeter';
+
+        // Data storage for live updates
+        let voltmeterStats = { min: 0, max: 0, sum: 0, count: 0 };
+        let ammeterStats = { min: 0, max: 0, sum: 0, count: 0 };
+        let pidData = { pv: [], sp: [] };
+        let dsoData = [];
+        let maxDataPoints = 100;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up input listeners
+            document.getElementById('frequency').addEventListener('input', function(e) {
+                document.getElementById('frequency-value').textContent = formatFrequency(e.target.value);
+            });
+
+            document.getElementById('amplitude').addEventListener('input', function(e) {
+                document.getElementById('amplitude-value').textContent = e.target.value + 'V';
+            });
+
+            document.getElementById('offset').addEventListener('input', function(e) {
+                document.getElementById('offset-value').textContent = e.target.value + 'V';
+            });
+
+            document.getElementById('voltage').addEventListener('input', function(e) {
+                document.getElementById('voltage-value').textContent = e.target.value + 'V';
+            });
+
+            document.getElementById('boost').addEventListener('input', function(e) {
+                document.getElementById('boost-value').textContent = e.target.value + '%';
+            });
+
+            document.getElementById('trigger-level').addEventListener('input', function(e) {
+                document.getElementById('trigger-level-value').textContent = e.target.value + 'V';
+            });
+
+            // Auto-focus session ID input
+            document.getElementById('session-id').focus();
+            
+            addMessage('info', 'Using WebSocket connection for maximum compatibility');
+        });
+
+        function formatFrequency(value) {
+            const freq = parseInt(value);
+            if (freq >= 1000) {
+                return (freq / 1000).toFixed(1) + 'kHz';
+            }
+            return freq + 'Hz';
+        }
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            currentTab = tabName;
+            addMessage('info', `Switched to ${tabName} tab`);
+        }
+
+        function toggleConnection() {
+            if (isConnected) {
+                disconnectWebSocket();
+            } else {
+                connectWebSocket();
+            }
+        }
+
+        function connectWebSocket() {
+            if (isConnected) return;
+
+            try {
+                // Get session ID from input
+                sessionId = document.getElementById('session-id').value.trim().toUpperCase();
+                
+                if (sessionId.length !== 6) {
+                    addMessage('error', 'Session ID must be exactly 6 characters');
+                    return;
+                }
+                
+                console.log('Connecting to WebSocket server with session:', sessionId);
+                updateConnectionStatus('Connecting...');
+                
+                // Create WebSocket connection
+                socket = new WebSocket('wss://echo.websocket.org/');
+                
+                socket.onopen = function() {
+                    isConnected = true;
+                    updateConnectionStatus('Connected');
+                    addMessage('received', `Connected with session: ${sessionId}`);
+                    
+                    // Send session ID to identify this client
+                    socket.send(JSON.stringify({
+                        type: 'session',
+                        session_id: sessionId
+                    }));
+                    
+                    // Show tab navigation
+                    document.getElementById('tab-nav').style.display = 'flex';
+                    
+                    // Send initial board ID request
+                    sendCommand('#ID;');
+                    
+                    console.log('WebSocket connected');
+                };
+                
+                socket.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('WebSocket message received:', data);
+                        handleWebSocketMessage(data);
+                    } catch (error) {
+                        console.error('Error parsing WebSocket message:', error);
+                    }
+                };
+                
+                socket.onclose = function() {
+                    if (isConnected) {
+                        console.log('WebSocket connection closed');
+                        updateConnectionStatus('Connection Lost');
+                        addMessage('received', 'Connection lost. Attempting to reconnect...');
+                        scheduleReconnect();
+                    }
+                };
+                
+                socket.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                    updateConnectionStatus('Connection Error');
+                    addMessage('error', 'Connection failed. Please check your internet connection and try again.');
+                    scheduleReconnect();
+                };
+                
+            } catch (error) {
+                console.error('Error creating WebSocket client:', error);
+                updateConnectionStatus('Connection Error');
+                addMessage('error', 'Connection failed. Please check your internet connection and try again.');
+            }
+        }
+
+        function disconnectWebSocket() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
+            }
+            isConnected = false;
+            updateConnectionStatus('Disconnected');
+            addMessage('received', 'Disconnected from session: ' + sessionId);
+            
+            // Hide tab navigation
+            document.getElementById('tab-nav').style.display = 'none';
+            
+            // Clear reconnect timer
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+            
+            console.log('WebSocket disconnected');
+        }
+
+        function scheduleReconnect() {
+            if (reconnectTimer) return;
+            
+            reconnectTimer = setTimeout(function() {
+                if (!isConnected && document.getElementById('session-id').value.trim().length === 6) {
+                    console.log('Attempting to reconnect...');
+                    connectWebSocket();
+                }
+            }, 5000);
+        }
+
+        function sendCommand(command) {
+            if (!isConnected) {
+                addMessage('error', 'Not connected');
+                return;
+            }
+            
+            try {
+                socket.send(JSON.stringify({
+                    type: 'command',
+                    command: command,
+                    session_id: sessionId
+                }));
+                console.log('Command sent:', command);
+                addMessage('sent', command);
+            } catch (error) {
+                console.error('Send failed:', error);
+                addMessage('error', 'Send failed: ' + error.message);
+            }
+        }
+
+        function sendPIDCommand() {
+            const kp = document.getElementById('kp').value;
+            const ki = document.getElementById('ki').value;
+            const kd = document.getElementById('kd').value;
+            const sp = document.getElementById('setpoint').value;
+            
+            const command = `#PID:P=${kp},I=${ki},D=${kd},SP=${sp};`;
+            sendCommand(command);
+        }
+
+        function updateFunctionGenerator() {
+            const frequency = document.getElementById('frequency').value;
+            const amplitude = document.getElementById('amplitude').value;
+            const offset = document.getElementById('offset').value;
+            
+            // Send frequency command
+            sendCommand(`#WAVE:F=${frequency}`);
+            
+            // Send amplitude and offset as parameters
+            sendCommand(`#WAVE:PARAMS ${amplitude},${offset}`);
+            
+            // Update status display
+            document.getElementById('waveform-frequency').textContent = formatFrequency(frequency);
+            document.getElementById('waveform-amplitude').textContent = amplitude + 'V';
+        }
+
+        function setFrequency(freq) {
+            document.getElementById('frequency').value = freq;
+            document.getElementById('frequency-value').textContent = formatFrequency(freq);
+            sendCommand(`#WAVE:F=${freq}`);
+        }
+
+        function handleWebSocketMessage(data) {
+            try {
+                const msg = data;
+                console.log('Processing WebSocket message:', msg);
+
+                // Parse different message types
+                if (msg.type === 'command_response') {
+                    addMessage('received', `Response: ${msg.response}`);
+                    
+                    // Parse command responses
+                    if (msg.command === '#ID;') {
+                        if (msg.response && msg.response.includes('STM32')) {
+                            addMessage('received', 'Board ID: ' + msg.response);
+                        }
+                    }
+                } else if (msg.type === 'data') {
+                    handleDataMessage(msg);
+                } else if (msg.type === 'error') {
+                    addMessage('error', 'Error: ' + msg.message);
+                } else if (msg.type === 'status') {
+                    handleStatusMessage(msg);
+                }
+            } catch (error) {
+                console.error('Error handling message:', error);
+            }
+        }
+
+        function handleDataMessage(msg) {
+            if (msg.data && msg.data.voltmeter) {
+                updateVoltmeterData(msg.data.voltmeter);
+            }
+            if (msg.data && msg.data.ammeter) {
+                updateAmmeterData(msg.data.ammeter);
+            }
+            if (msg.data && msg.data.dso) {
+                updateDSOData(msg.data.dso);
+            }
+        }
+
+        function handleStatusMessage(msg) {
+            if (msg.voltmeter) {
+                updateVoltmeterData(msg.voltmeter);
+            }
+            if (msg.ammeter) {
+                updateAmmeterData(msg.ammeter);
+            }
+            if (msg.function_generator) {
+                updateFunctionGeneratorStatus(msg.function_generator);
+            }
+            if (msg.power_control) {
+                updatePowerControlStatus(msg.power_control);
+            }
+            if (msg.dso) {
+                updateDSOStatus(msg.dso);
+            }
+            if (msg.pid) {
+                updatePIDStatus(msg.pid);
+            }
+        }
+
+        // Update functions for live data
+        function updateVoltmeterData(data) {
+            if (data.value !== undefined) {
+                const value = parseFloat(data.value);
+                
+                // Update display
+                document.getElementById('voltmeter-value').textContent = value.toFixed(3);
+                
+                // Update statistics
+                if (voltmeterStats.count === 0) {
+                    voltmeterStats.min = value;
+                    voltmeterStats.max = value;
+                    voltmeterStats.sum = value;
+                } else {
+                    voltmeterStats.min = Math.min(voltmeterStats.min, value);
+                    voltmeterStats.max = Math.max(voltmeterStats.max, value);
+                    voltmeterStats.sum += value;
+                }
+                voltmeterStats.count++;
+                
+                const avg = voltmeterStats.sum / voltmeterStats.count;
+                
+                document.getElementById('voltmeter-min').textContent = voltmeterStats.min.toFixed(3);
+                document.getElementById('voltmeter-max').textContent = voltmeterStats.max.toFixed(3);
+                document.getElementById('voltmeter-avg').textContent = avg.toFixed(3);
+                document.getElementById('voltmeter-count').textContent = voltmeterStats.count;
+            }
+        }
+
+        function updateAmmeterData(data) {
+            if (data.value !== undefined) {
+                const value = parseFloat(data.value);
+                
+                // Update display
+                document.getElementById('ammeter-value').textContent = value.toFixed(3);
+                
+                // Update statistics
+                if (ammeterStats.count === 0) {
+                    ammeterStats.min = value;
+                    ammeterStats.max = value;
+                    ammeterStats.sum = value;
+                } else {
+                    ammeterStats.min = Math.min(ammeterStats.min, value);
+                    ammeterStats.max = Math.max(ammeterStats.max, value);
+                    ammeterStats.sum += value;
+                }
+                ammeterStats.count++;
+                
+                const avg = ammeterStats.sum / ammeterStats.count;
+                
+                document.getElementById('ammeter-min').textContent = ammeterStats.min.toFixed(3);
+                document.getElementById('ammeter-max').textContent = ammeterStats.max.toFixed(3);
+                document.getElementById('ammeter-avg').textContent = avg.toFixed(3);
+                document.getElementById('ammeter-count').textContent = ammeterStats.count;
+            }
+        }
+
+        function updateDSOData(data) {
+            if (data.samples && data.samples.length > 0) {
+                dsoData = data.samples.slice(-maxDataPoints);
+                document.getElementById('dso-samples').textContent = data.samples.length;
+            }
+        }
+
+        function updateFunctionGeneratorStatus(data) {
+            if (data.waveform) {
+                document.getElementById('waveform-status').textContent = data.waveform;
+            }
+            if (data.frequency) {
+                document.getElementById('waveform-frequency').textContent = formatFrequency(data.frequency);
+            }
+            if (data.amplitude !== undefined) {
+                document.getElementById('waveform-amplitude').textContent = data.amplitude + 'V';
+            }
+            if (data.status) {
+                document.getElementById('waveform-status').textContent = data.status;
+            }
+        }
+
+        function updatePowerControlStatus(data) {
+            if (data.vregulator) {
+                document.getElementById('vreg-status').textContent = data.vregulator;
+            }
+            if (data.boost) {
+                document.getElementById('boost-status').textContent = data.boost;
+            }
+            if (data.vregulator_set) {
+                document.getElementById('vreg-set').textContent = data.vregulator_set + 'V';
+            }
+            if (data.boost_set) {
+                document.getElementById('boost-set').textContent = data.boost_set + '%';
+            }
+        }
+
+        function updateDSOStatus(data) {
+            if (data.mode) {
+                document.getElementById('dso-mode').textContent = data.mode;
+            }
+            if (data.trigger) {
+                document.getElementById('dso-trigger').textContent = data.trigger;
+            }
+            if (data.timebase) {
+                document.getElementById('dso-timebase').textContent = data.timebase + 'ms';
+            }
+        }
+
+        function updatePIDStatus(data) {
+            if (data.pv !== undefined) {
+                document.getElementById('pid-pv').textContent = data.pv.toFixed(3);
+            }
+            if (data.sp !== undefined) {
+                document.getElementById('pid-sp').textContent = data.sp.toFixed(3);
+            }
+            if (data.output !== undefined) {
+                document.getElementById('pid-output').textContent = data.output.toFixed(3);
+            }
+            if (data.error !== undefined) {
+                document.getElementById('pid-error').textContent = data.error.toFixed(3);
+            }
+        }
+
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connection-status');
+            const statusDot = document.getElementById('status-dot');
+            const connectBtn = document.getElementById('connect-btn');
+            
+            if (statusElement) {
+                statusElement.textContent = status;
+            }
+            
+            if (statusDot) {
+                statusDot.className = 'status-dot';
+                if (status === 'Connected') {
+                    statusDot.classList.add('connected');
+                } else if (status === 'Connecting') {
+                    statusDot.classList.add('connecting');
+                }
+            }
+            
+            if (connectBtn) {
+                if (status === 'Connected') {
+                    connectBtn.textContent = 'Disconnect';
+                    connectBtn.className = 'btn btn-danger';
+                } else if (status === 'Connecting') {
+                    connectBtn.textContent = 'Connecting...';
+                    connectBtn.className = 'btn btn-secondary';
+                    connectBtn.disabled = true;
+                } else if (status === 'Connection Error') {
+                    connectBtn.textContent = 'Retry Connection';
+                    connectBtn.className = 'btn btn-primary';
+                } else {
+                    connectBtn.textContent = 'Connect';
+                    connectBtn.className = 'btn btn-primary';
+                }
+            }
+        }
+
+        function addMessage(type, message) {
+            const logElement = document.getElementById('message-log');
+            if (logElement) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${type}`;
+                messageDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                logElement.appendChild(messageDiv);
+                logElement.scrollTop = logElement.scrollHeight;
+                
+                // Keep only last 100 messages
+                while (logElement.children.length > 100) {
+                    logElement.removeChild(logElement.firstChild);
+                }
+            }
+        }
+
+        // Touch optimizations
+        document.addEventListener('gesturestart', function(e) {
+            if (e.scale !== 1) {
+                e.preventDefault();
+            }
+        });
+
+        // Add touch feedback
+        document.querySelectorAll('.btn').forEach(element => {
+            element.addEventListener('touchstart', function() {
+                this.style.transform = 'scale(0.95)';
+            });
+            
+            element.addEventListener('touchend', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>
