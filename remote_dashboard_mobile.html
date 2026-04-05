@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>STM32 Remote Laboratory - Mobile Optimized</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        /* Mobile-First Academic CSS */
+        :root {
+            /* Professional Academic Theme */
+            --BG_PRIMARY: #ffffff;
+            --BG_SECONDARY: #f8f9fa;
+            --BG_TERTIARY: #e9ecef;
+            --BORDER_COLOR: #dee2e6;
+            --BORDER_LIGHT: #f1f3f4;
+            --TEXT_PRIMARY: #212529;
+            --TEXT_SECONDARY: #6c757d;
+            --TEXT_MUTED: #adb5bd;
+            --PRIMARY_COLOR: #0066cc;
+            --SECONDARY_COLOR: #28a745;
+            --DANGER_COLOR: #dc3545;
+            --WARNING_COLOR: #ffc107;
+            --INFO_COLOR: #17a2b8;
+            --FONT_FAMILY: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --FONT_MONO: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+            --SHADOW_SOFT: 0 8px 16px rgba(0,0,0,0.15);
+            --SHADOW_MEDIUM: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Dark Mode for Academic Use */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --BG_PRIMARY: #1a1a1a;
+                --BG_SECONDARY: #2d2d2d;
+                --BG_TERTIARY: #3a3a3a;
+                --BORDER_COLOR: #4a4a4a;
+                --BORDER_LIGHT: #5a5a5a;
+                --TEXT_PRIMARY: #e0e0e0;
+                --TEXT_SECONDARY: #b0b0b0;
+                --TEXT_MUTED: #808080;
+                --PRIMARY_COLOR: #4d94ff;
+                --SECONDARY_COLOR: #28a745;
+                --DANGER_COLOR: #ff6b6b;
+                --WARNING_COLOR: #ffd93d;
+                --INFO_COLOR: #74c0fc;
+            }
+        }
+
+        /* Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--FONT_FAMILY);
+            background: var(--BG_PRIMARY);
+            color: var(--TEXT_PRIMARY);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+
+        /* Mobile-First Container */
+        .container {
+            max-width: 100%;
+            padding: 8px;
+            margin: 0 auto;
+            background: var(--BG_PRIMARY);
+        }
+
+        /* Header */
+        .header {
+            background: var(--BG_SECONDARY);
+            padding: 16px;
+            margin-bottom: 16px;
+            border-radius: 12px;
+            box-shadow: var(--SHADOW_SOFT);
+        }
+
+        .header h1 {
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            text-align: center;
+            margin: 0;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: var(--BG_TERTIARY);
+            border-radius: 20px;
+            border: 1px solid var(--BORDER_COLOR);
+        }
+
+        .status-label {
+            font-size: clamp(0.75rem, 2vw, 0.875rem);
+            color: var(--TEXT_MUTED);
+            font-weight: 500;
+        }
+
+        .status-value {
+            font-size: clamp(0.875rem, 2.5vw, 1rem);
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            font-family: var(--FONT_MONO);
+        }
+
+        /* Tab Navigation - Mobile Optimized */
+        .tab-nav {
+            display: flex;
+            background: var(--BG_SECONDARY);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 16px;
+            overflow-x: auto;
+            box-shadow: var(--SHADOW_SOFT);
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 12px 8px;
+            background: transparent;
+            border: none;
+            color: var(--TEXT_SECONDARY);
+            font-size: clamp(0.75rem, 2.5vw, 0.875rem);
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 80px;
+        }
+
+        .tab-button:hover {
+            color: var(--TEXT_PRIMARY);
+            background: var(--BG_TERTIARY);
+        }
+
+        .tab-button.active {
+            color: var(--TEXT_PRIMARY);
+            background: var(--PRIMARY_COLOR);
+            font-weight: 600;
+        }
+
+        /* Control Panels */
+        .control-panel {
+            background: var(--BG_SECONDARY);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--SHADOW_SOFT);
+        }
+
+        .panel-header {
+            font-size: clamp(1rem, 3vw, 1.125rem);
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+
+        .control-group {
+            background: var(--BG_TERTIARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .control-label {
+            display: block;
+            font-size: clamp(0.75rem, 2.5vw, 0.875rem);
+            color: var(--TEXT_MUTED);
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        /* Mobile-First Buttons */
+        .btn {
+            width: 100%;
+            padding: 14px 20px;
+            font-size: clamp(0.875rem, 2.5vw, 1rem);
+            font-weight: 500;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            margin-bottom: 8px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-primary {
+            background: var(--PRIMARY_COLOR);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--BG_TERTIARY);
+            color: var(--TEXT_PRIMARY);
+            border: 1px solid var(--BORDER_COLOR);
+        }
+
+        .btn-danger {
+            background: var(--DANGER_COLOR);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--SHADOW_MEDIUM);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: var(--SHADOW_SOFT);
+        }
+
+        /* Input Controls */
+        .input-control {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: clamp(0.875rem, 2.5vw, 1rem);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 6px;
+            background: var(--BG_PRIMARY);
+            color: var(--TEXT_PRIMARY);
+            margin-bottom: 8px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .input-control:focus {
+            outline: none;
+            border-color: var(--PRIMARY_COLOR);
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.3);
+        }
+
+        /* Value Display */
+        .value-display {
+            background: var(--BG_TERTIARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .value-label {
+            font-size: clamp(0.75rem, 2vw, 0.875rem);
+            color: var(--TEXT_MUTED);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .value-number {
+            font-size: clamp(1.25rem, 4vw, 1.5rem);
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            font-family: var(--FONT_MONO);
+        }
+
+        /* Statistics Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+        }
+
+        .stat-card {
+            background: var(--BG_TERTIARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: clamp(0.625rem, 2vw, 0.75rem);
+            color: var(--TEXT_MUTED);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: clamp(1rem, 3vw, 1.125rem);
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            font-family: var(--FONT_MONO);
+        }
+
+        /* Chart Container */
+        .chart-container {
+            background: var(--BG_SECONDARY);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--SHADOW_SOFT);
+            height: 300px;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 480px) {
+            .container {
+                padding: 4px;
+            }
+            
+            .header {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+            
+            .status-bar {
+                flex-direction: column;
+                gap: 4px;
+            }
+            
+            .status-item {
+                padding: 6px 8px;
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .tab-button {
+                padding: 10px 6px;
+                font-size: clamp(0.625rem, 3vw, 0.75rem);
+                min-width: 60px;
+            }
+            
+            .controls-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .btn {
+                padding: 12px 16px;
+                font-size: clamp(0.75rem, 3vw, 0.875rem);
+            }
+            
+            .input-control {
+                padding: 10px 12px;
+                font-size: clamp(0.75rem, 3vw, 0.875rem);
+            }
+        }
+
+        @media (max-width: 320px) {
+            .tab-button {
+                font-size: clamp(0.5rem, 4vw, 0.625rem);
+                padding: 8px 4px;
+                min-width: 50px;
+            }
+            
+            .btn {
+                padding: 10px 12px;
+                font-size: clamp(0.625rem, 4vw, 0.75rem);
+            }
+            
+            .value-number {
+                font-size: clamp(1rem, 4vw, 1.125rem);
+            }
+        }
+
+        /* Touch Optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .btn, .tab-button, .input-control {
+                min-height: 44px;  /* iOS touch target */
+                min-width: 44px;
+            }
+        }
+
+        /* Prevent zoom on mobile */
+        @media (max-width: 768px) {
+            body {
+                -ms-text-size-adjust: 100%;
+                -webkit-text-size-adjust: 100%;
+            }
+        }
+
+        /* Reduce motion on mobile */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>STM32 Remote Laboratory</h1>
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-label">Status:</span>
+                    <span class="status-value" id="connection-status">Disconnected</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Session:</span>
+                    <span class="status-value" id="session-id">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-button active" onclick="switchTab('oscilloscope')">Oscilloscope</button>
+            <button class="tab-button" onclick="switchTab('multimeter')">Multimeter</button>
+            <button class="tab-button" onclick="switchTab('function')">Function Generator</button>
+            <button class="tab-button" onclick="switchTab('protocol')">Protocol</button>
+            <button class="tab-button" onclick="switchTab('pid')">PID Control</button>
+            <button class="tab-button" onclick="switchTab('notes')">Notes</button>
+        </div>
+
+        <!-- Oscilloscope Tab -->
+        <div class="tab-pane" id="oscilloscope">
+            <div class="control-panel">
+                <div class="panel-header">Oscilloscope Controls</div>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label class="control-label">Timebase</label>
+                        <select class="input-control" id="timebase">
+                            <option value="0.001">0.001 ms</option>
+                            <option value="0.01">0.01 ms</option>
+                            <option value="0.1">0.1 ms</option>
+                            <option value="1">1 ms</option>
+                            <option value="10">10 ms</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Trigger</label>
+                        <select class="input-control" id="trigger">
+                            <option value="auto">Auto</option>
+                            <option value="normal">Normal</option>
+                            <option value="single">Single</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="oscilloscope-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Multimeter Tab -->
+        <div class="tab-pane" id="multimeter" style="display:none;">
+            <div class="control-panel">
+                <div class="panel-header">Measurement Mode</div>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label class="control-label">Mode</label>
+                        <select class="input-control" id="meter-mode">
+                            <option value="V">DC Voltage</option>
+                            <option value="A">DC Current</option>
+                            <option value="R">Resistance</option>
+                            <option value="C">Capacitance</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Range</label>
+                        <select class="input-control" id="meter-range">
+                            <option value="12">12V</option>
+                            <option value="24">24V</option>
+                            <option value="48">48V</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="value-display">
+                <div class="value-label">Measurement</div>
+                <div class="value-number" id="meter-value">0.000</div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Min</div>
+                    <div class="stat-value" id="meter-min">0.000</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Max</div>
+                    <div class="stat-value" id="meter-max">0.000</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Avg</div>
+                    <div class="stat-value" id="meter-avg">0.000</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Function Generator Tab -->
+        <div class="tab-pane" id="function" style="display:none;">
+            <div class="control-panel">
+                <div class="panel-header">Waveform Generator</div>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label class="control-label">Waveform</label>
+                        <div class="controls-grid">
+                            <button class="btn btn-secondary" onclick="sendCommand('#FG:WAVE:SQ')">Square</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#FG:WAVE:SI')">Sine</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#FG:WAVE:TR')">Triangle</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Frequency</label>
+                        <div class="controls-grid">
+                            <button class="btn btn-secondary" onclick="sendCommand('#FG:FREQ 10')">10 Hz</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#FG:FREQ 100')">100 Hz</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#FG:FREQ 1000')">1 kHz</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#FG:FREQ 10000')">10 kHz</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Amplitude</label>
+                        <input type="range" class="input-control" id="amplitude" min="0" max="5" step="0.1" value="2.5">
+                        <div class="value-display">
+                            <div class="value-number" id="amp-value">2.5V</div>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Offset</label>
+                        <input type="range" class="input-control" id="offset" min="-5" max="5" step="0.1" value="0">
+                        <div class="value-display">
+                            <div class="value-number" id="offset-value">0.0V</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-panel">
+                <div class="panel-header">Output Control</div>
+                <div class="controls-grid">
+                    <button class="btn btn-primary" onclick="updateFunctionGenerator()">Update</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#FG:OUTPUT ON')">Output ON</button>
+                    <button class="btn btn-danger" onclick="sendCommand('#FG:OUTPUT OFF')">Output OFF</button>
+                </div>
+            </div>
+            <div class="value-display">
+                <div class="stat-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Waveform</div>
+                        <div class="stat-value" id="waveform">Square</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Frequency</div>
+                        <div class="stat-value" id="freq-status">1000 Hz</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Amplitude</div>
+                        <div class="stat-value" id="amp-status">2.5V</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Protocol Tab -->
+        <div class="tab-pane" id="protocol" style="display:none;">
+            <div class="control-panel">
+                <div class="panel-header">Protocol Commands</div>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label class="control-label">Quick Commands</label>
+                        <div class="controls-grid">
+                            <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE V')">DC Voltage</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE A')">DC Current</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE R')">Resistance</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE F')">Frequency</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE AC')">AC Voltage</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE CAP')">Capacitance</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PID Control Tab -->
+        <div class="tab-pane" id="pid" style="display:none;">
+            <div class="control-panel">
+                <div class="panel-header">PID Control</div>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label class="control-label">P (Proportional)</label>
+                        <input type="number" class="input-control" id="kp" value="1.0" step="0.1" min="0" max="100">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">I (Integral)</label>
+                        <input type="number" class="input-control" id="ki" value="0.1" step="0.01" min="0" max="100">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">D (Derivative)</label>
+                        <input type="number" class="input-control" id="kd" value="0.05" step="0.01" min="0" max="100">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Setpoint</label>
+                        <input type="number" class="input-control" id="setpoint" value="5.0" step="0.1" min="0" max="12">
+                    </div>
+                </div>
+            </div>
+            <div class="control-panel">
+                <div class="panel-header">PID Actions</div>
+                <div class="controls-grid">
+                    <button class="btn btn-primary" onclick="sendPIDCommand()">Apply Gains</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#PID:START')">Start</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#PID:STOP')">Stop</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#PID:RESET')">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes Tab -->
+        <div class="tab-pane" id="notes" style="display:none;">
+            <div class="control-panel">
+                <div class="panel-header">Session Notes</div>
+                <textarea class="input-control" id="notes" rows="8" placeholder="Enter your notes here..."></textarea>
+                <div class="controls-grid">
+                    <button class="btn btn-primary" onclick="saveNotes()">Save Notes</button>
+                    <button class="btn btn-secondary" onclick="clearNotes()">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // MQTT Client
+        let client;
+        let isConnected = false;
+        let currentTab = 'oscilloscope';
+        let sessionId = 'mobile_' + Math.random().toString(36).substr(2, 9);
+
+        // Chart instances
+        let oscilloscopeChart;
+        let multimeterChart;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMQTT();
+            initializeCharts();
+            updateConnectionStatus('Disconnected');
+            document.getElementById('session-id').textContent = sessionId;
+        });
+
+        function initializeMQTT() {
+            client = new Paho.MQTT.Client(sessionId, sessionId);
+            
+            client.onConnectionLost = function(responseObject) {
+                console.log('Connection lost:', responseObject.errorMessage);
+                updateConnectionStatus('Reconnecting...');
+            };
+
+            client.onMessageArrived = function(message) {
+                try {
+                    const payload = message.payloadString;
+                    console.log('MQTT message received:', payload);
+                    handleMessage(payload);
+                } catch (error) {
+                    console.error('Error parsing MQTT message:', error);
+                }
+            };
+
+            client.connect({
+                onSuccess: function() {
+                    isConnected = true;
+                    updateConnectionStatus('Connected');
+                    console.log('MQTT connected successfully');
+                },
+                onFailure: function(responseObject) {
+                    console.error('MQTT connection failed:', responseObject.errorMessage);
+                    updateConnectionStatus('Connection Failed');
+                }
+            });
+        }
+
+        function initializeCharts() {
+            // Oscilloscope Chart
+            const oscilloscopeCtx = document.getElementById('oscilloscope-chart').getContext('2d');
+            oscilloscopeChart = new Chart(oscilloscopeCtx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Signal',
+                        data: [],
+                        borderColor: '#0066cc',
+                        backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Time (s)'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Amplitude (V)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function handleMessage(payload) {
+            try {
+                const msg = payload.trim();
+                console.log('Processing message:', msg);
+
+                // Parse different message types
+                if (msg.startsWith('#DATA:')) {
+                    handleDataMessage(msg);
+                } else if (msg.startsWith('#DSO:')) {
+                    handleDSOMessage(msg);
+                } else if (msg.startsWith('#MM:')) {
+                    handleMultimeterMessage(msg);
+                } else if (msg.startsWith('#FG:')) {
+                    handleFunctionGeneratorMessage(msg);
+                } else if (msg.startsWith('#PID:')) {
+                    handlePIDMessage(msg);
+                }
+            } catch (error) {
+                console.error('Error handling message:', error);
+            }
+        }
+
+        function handleDataMessage(msg) {
+            const match = msg.match(/#DATA:M=([A-VD]),X=([\d.]+)/);
+            if (match && currentTab === 'oscilloscope') {
+                const time = (Date.now() / 1000) % 10; // Simple time base
+                const value = parseFloat(match[2]);
+                
+                oscilloscopeChart.data.datasets[0].data.push({
+                    x: time,
+                    y: value
+                });
+
+                // Keep only last 100 points for performance
+                if (oscilloscopeChart.data.datasets[0].data.length > 100) {
+                    oscilloscopeChart.data.datasets[0].data.shift();
+                }
+
+                oscilloscopeChart.update('none');
+            }
+        }
+
+        function handleDSOMessage(msg) {
+            const samples = msg.substring(5).split(',').map(parseFloat);
+            if (samples.length > 0 && currentTab === 'oscilloscope') {
+                oscilloscopeChart.data.datasets[0].data = samples.map((value, index) => ({
+                    x: index * 0.01,
+                    y: value
+                }));
+                oscilloscopeChart.update('none');
+            }
+        }
+
+        function handleMultimeterMessage(msg) {
+            const match = msg.match(/#DATA:M=([A-VDR]),X=([\d.]+)/);
+            if (match && currentTab === 'multimeter') {
+                const value = parseFloat(match[2]);
+                const mode = match[1];
+                
+                document.getElementById('meter-value').textContent = value.toFixed(3);
+                
+                // Update mode display
+                const modeText = {
+                    'V': 'DC Voltage',
+                    'A': 'DC Current',
+                    'R': 'Resistance',
+                    'D': 'AC Voltage',
+                    'C': 'Capacitance'
+                };
+                document.querySelector('#meter-mode option[value="' + mode + '"]').selected = true;
+            }
+        }
+
+        function handleFunctionGeneratorMessage(msg) {
+            if (currentTab === 'function') {
+                // Parse frequency
+                const freqMatch = msg.match(/#FG:FREQ\s+([\d.]+)/);
+                if (freqMatch) {
+                    const freq = parseFloat(freqMatch[1]);
+                    document.getElementById('freq-status').textContent = freq + ' Hz';
+                }
+
+                // Parse amplitude
+                const ampMatch = msg.match(/#FG:PARAMS\s+([\d.-]+),/);
+                if (ampMatch) {
+                    const parts = ampMatch[1].split(',');
+                    if (parts.length >= 1) {
+                        document.getElementById('amp-status').textContent = parts[0] + 'V';
+                        document.getElementById('amplitude').value = parts[0];
+                    }
+                    if (parts.length >= 2) {
+                        document.getElementById('offset-value').textContent = parts[1] + 'V';
+                        document.getElementById('offset').value = parts[1];
+                    }
+                }
+
+                // Parse waveform
+                if (msg.includes('SQ')) {
+                    document.getElementById('waveform').textContent = 'Square';
+                } else if (msg.includes('SI')) {
+                    document.getElementById('waveform').textContent = 'Sine';
+                } else if (msg.includes('TR')) {
+                    document.getElementById('waveform').textContent = 'Triangle';
+                }
+            }
+        }
+
+        function handlePIDMessage(msg) {
+            if (currentTab === 'pid') {
+                if (msg.includes('START')) {
+                    console.log('PID started');
+                } else if (msg.includes('STOP')) {
+                    console.log('PID stopped');
+                } else if (msg.includes('RESET')) {
+                    console.log('PID reset');
+                }
+            }
+        }
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.style.display = 'none';
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            const selectedTab = document.getElementById(tabName);
+            if (selectedTab) {
+                selectedTab.style.display = 'block';
+            }
+            
+            // Add active class to selected button
+            event.target.classList.add('active');
+            
+            currentTab = tabName;
+        }
+
+        function sendCommand(command) {
+            if (isConnected && client) {
+                const message = new Paho.MQTT.Message(command);
+                message.destinationName = `stm32lab/${sessionId}/cmds`;
+                client.send(message);
+                console.log('Command sent:', command);
+            } else {
+                console.log('Not connected - command not sent:', command);
+            }
+        }
+
+        function sendPIDCommand() {
+            const kp = document.getElementById('kp').value;
+            const ki = document.getElementById('ki').value;
+            const kd = document.getElementById('kd').value;
+            const sp = document.getElementById('setpoint').value;
+            
+            const command = `#PID:P=${kp},I=${ki},D=${kd},SP=${sp};`;
+            sendCommand(command);
+        }
+
+        function updateFunctionGenerator() {
+            const amplitude = document.getElementById('amplitude').value;
+            const offset = document.getElementById('offset').value;
+            const command = `#FG:PARAMS ${amplitude},${offset}`;
+            sendCommand(command);
+        }
+
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connection-status');
+            if (statusElement) {
+                statusElement.textContent = status;
+                statusElement.style.color = status === 'Connected' ? '#28a745' : '#dc3545';
+            }
+        }
+
+        // Mobile-optimized input handlers
+        document.getElementById('amplitude').addEventListener('input', function(e) {
+            document.getElementById('amp-value').textContent = e.target.value + 'V';
+        });
+
+        document.getElementById('offset').addEventListener('input', function(e) {
+            document.getElementById('offset-value').textContent = e.target.value + 'V';
+        });
+
+        // Prevent zoom on mobile
+        document.addEventListener('gesturestart', function(e) {
+            if (e.scale !== 1) {
+                e.preventDefault();
+            }
+        });
+
+        // Add touch feedback
+        document.querySelectorAll('.btn, .tab-button').forEach(element => {
+            element.addEventListener('touchstart', function() {
+                this.style.transform = 'scale(0.95)';
+            });
+            
+            element.addEventListener('touchend', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>
