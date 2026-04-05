@@ -1080,8 +1080,17 @@ class MainWindow(QMainWindow):
             self._server.publish_data(self._analytics.snapshot(), self._analytics.stats())
 
     def _on_cloud_command(self, cmd: str):
+        """Handle incoming cloud command - route to appropriate handler"""
+        cmd = cmd.strip()
+        
+        # Route to SCPI server if available
         if hasattr(self, "tab_scpi") and self.tab_scpi._server:
+            print(f"[CLOUD] Routing to SCPI: {cmd}")
             self.tab_scpi._server.dispatcher.handle(cmd)
+        else:
+            # Route regular STM32 commands to serial
+            print(f"[CLOUD] Routing to Serial: {cmd}")
+            self._send_command(cmd)
 
     # -- Help dialogs ------------------------------------------------------
 
