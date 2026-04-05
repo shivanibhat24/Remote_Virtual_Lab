@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>STM32 Mobile Session Interface</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --BG_PRIMARY: #ffffff;
+            --BG_DARK: #1a1a1a;
+            --BG_CARD: #f8f9fa;
+            --BG_CARD_DARK: #2d2d2d;
+            --BORDER_COLOR: #dee2e6;
+            --BORDER_DARK: #4a5568;
+            --TEXT_PRIMARY: #212529;
+            --TEXT_DARK: #e2e8f0;
+            --TEXT_MUTED: #6c757d;
+            --TEXT_MUTED_DARK: #a0aec0;
+            --PRIMARY_COLOR: #0066cc;
+            --PRIMARY_DARK: #3182ce;
+            --SUCCESS_COLOR: #28a745;
+            --SUCCESS_DARK: #38a169;
+            --DANGER_COLOR: #dc3545;
+            --DANGER_DARK: #e53e3e;
+            --WARNING_COLOR: #ffc107;
+            --FONT_FAMILY: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --FONT_MONO: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --BG_PRIMARY: var(--BG_DARK);
+                --BG_CARD: var(--BG_CARD_DARK);
+                --BORDER_COLOR: var(--BORDER_DARK);
+                --TEXT_PRIMARY: var(--TEXT_DARK);
+                --TEXT_MUTED: var(--TEXT_MUTED_DARK);
+                --PRIMARY_COLOR: var(--PRIMARY_DARK);
+                --SUCCESS_COLOR: var(--SUCCESS_DARK);
+                --DANGER_COLOR: var(--DANGER_DARK);
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--FONT_FAMILY);
+            background: var(--BG_PRIMARY);
+            color: var(--TEXT_PRIMARY);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 100%;
+            padding: 16px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: var(--BG_CARD);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .header-subtitle {
+            font-size: 1rem;
+            color: var(--TEXT_MUTED);
+            text-align: center;
+        }
+
+        /* Connection Panel */
+        .connection-panel {
+            background: var(--BG_CARD);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: var(--BG_PRIMARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 12px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--DANGER_COLOR);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: var(--SUCCESS_COLOR);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--TEXT_PRIMARY);
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--TEXT_MUTED);
+            margin-bottom: 8px;
+        }
+
+        .input-control {
+            width: 100%;
+            padding: 16px;
+            font-size: 1.25rem;
+            border: 2px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            background: var(--BG_PRIMARY);
+            color: var(--TEXT_PRIMARY);
+            transition: all 0.2s ease;
+            font-family: var(--FONT_MONO);
+            text-align: center;
+            letter-spacing: 0.1em;
+        }
+
+        .input-control:focus {
+            outline: none;
+            border-color: var(--PRIMARY_COLOR);
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            margin-bottom: 12px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-primary {
+            background: var(--PRIMARY_COLOR);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0052a3;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 102, 204, 0.2);
+        }
+
+        .btn-danger {
+            background: var(--DANGER_COLOR);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(220, 53, 69, 0.2);
+        }
+
+        .btn-secondary {
+            background: var(--BG_CARD);
+            color: var(--TEXT_PRIMARY);
+            border: 2px solid var(--BORDER_COLOR);
+        }
+
+        .btn-secondary:hover {
+            background: var(--BORDER_COLOR);
+            transform: translateY(-1px);
+        }
+
+        /* Board Interface */
+        .board-interface {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .board-card {
+            background: var(--BG_CARD);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: all 0.2s ease;
+        }
+
+        .board-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+        }
+
+        .board-card.inactive {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .card-header {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--BORDER_COLOR);
+        }
+
+        .control-group {
+            margin-bottom: 16px;
+        }
+
+        .control-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--TEXT_MUTED);
+            margin-bottom: 8px;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .button-grid.single {
+            grid-template-columns: 1fr;
+        }
+
+        .value-display {
+            background: var(--BG_PRIMARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .value-display:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .value-number {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            font-family: var(--FONT_MONO);
+        }
+
+        .value-unit {
+            font-size: 0.875rem;
+            color: var(--TEXT_MUTED);
+            font-weight: 500;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .status-item {
+            background: var(--BG_PRIMARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .status-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .status-label {
+            font-size: 0.75rem;
+            color: var(--TEXT_MUTED);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .status-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            font-family: var(--FONT_MONO);
+        }
+
+        /* Message Log */
+        .message-log {
+            background: var(--BG_CARD);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 12px;
+            padding: 16px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: var(--FONT_MONO);
+            font-size: 0.875rem;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .message {
+            margin-bottom: 4px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            background: var(--BG_PRIMARY);
+            color: var(--TEXT_PRIMARY);
+        }
+
+        .message.sent {
+            background: var(--PRIMARY_COLOR);
+            color: white;
+        }
+
+        .message.received {
+            background: var(--SUCCESS_COLOR);
+            color: white;
+        }
+
+        .message.error {
+            background: var(--DANGER_COLOR);
+            color: white;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            background: var(--BG_CARD);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+            }
+            
+            .board-interface {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 8px;
+            }
+            
+            .connection-panel,
+            .board-card,
+            .quick-actions,
+            .message-log {
+                padding: 16px;
+            }
+            
+            .button-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Touch Optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .btn, .input-control {
+                min-height: 44px;
+                min-width: 44px;
+            }
+        }
+
+        /* Prevent zoom on mobile */
+        @media (max-width: 768px) {
+            body {
+                -ms-text-size-adjust: 100%;
+                -webkit-text-size-adjust: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-title">STM32 Mobile Session Interface</div>
+            <div class="header-subtitle">Connect using session ID from host application</div>
+        </div>
+
+        <!-- Connection Panel -->
+        <div class="connection-panel">
+            <div class="connection-status">
+                <div class="status-dot" id="status-dot"></div>
+                <span class="status-text" id="connection-status">Disconnected</span>
+            </div>
+            
+            <div class="input-group">
+                <label class="input-label" for="session-id">Session ID (6 characters)</label>
+                <input type="text" id="session-id" class="input-control" 
+                       placeholder="X9T4K2" maxlength="6" value="X9T4K2">
+            </div>
+            
+            <button class="btn btn-primary" id="connect-btn" onclick="toggleConnection()">Connect</button>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions" id="quick-actions" style="display: none;">
+            <div class="card-header">Quick Actions</div>
+            <div class="action-buttons">
+                <button class="btn btn-secondary" onclick="sendCommand('#ID;')">Board ID</button>
+                <button class="btn btn-secondary" onclick="sendCommand('#MODE:V')">Voltmeter</button>
+                <button class="btn btn-secondary" onclick="sendCommand('#MODE:A')">Ammeter</button>
+                <button class="btn btn-secondary" onclick="sendCommand('#MODE:D')">DSO</button>
+                <button class="btn btn-secondary" onclick="sendCommand('#WAVE:SQ')">Square</button>
+                <button class="btn btn-secondary" onclick="sendCommand('#WAVE:SI')">Sine</button>
+                <button class="btn btn-secondary" onclick="sendCommand('#WAVE:TR')">Triangle</button>
+            </div>
+        </div>
+
+        <!-- Board Interface -->
+        <div class="board-interface" id="board-interface" style="display: none;">
+            <!-- Voltmeter Card -->
+            <div class="board-card" id="voltmeter-card">
+                <div class="card-header">Voltmeter</div>
+                <div class="control-group">
+                    <label class="control-label">Range Selection</label>
+                    <div class="button-grid">
+                        <button class="btn btn-secondary" onclick="sendCommand('#RANGE:V=12')">12V</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#RANGE:V=16')">16V</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#RANGE:V=24')">24V</button>
+                    </div>
+                </div>
+                <div class="value-display">
+                    <div class="value-number" id="voltmeter-value">0.000</div>
+                    <div class="value-unit">V</div>
+                </div>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">Min</div>
+                        <div class="status-value" id="voltmeter-min">0.000</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Max</div>
+                        <div class="status-value" id="voltmeter-max">0.000</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ammeter Card -->
+            <div class="board-card" id="ammeter-card">
+                <div class="card-header">Ammeter</div>
+                <div class="control-group">
+                    <label class="control-label">Range Selection</label>
+                    <div class="button-grid">
+                        <button class="btn btn-secondary" onclick="sendCommand('#RANGE:A=100')">100mA</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#RANGE:A=200')">200mA</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#RANGE:A=500')">500mA</button>
+                    </div>
+                </div>
+                <div class="value-display">
+                    <div class="value-number" id="ammeter-value">0.000</div>
+                    <div class="value-unit">mA</div>
+                </div>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">Min</div>
+                        <div class="status-value" id="ammeter-min">0.000</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Max</div>
+                        <div class="status-value" id="ammeter-max">0.000</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Function Generator Card -->
+            <div class="board-card" id="function-card">
+                <div class="card-header">Function Generator</div>
+                <div class="control-group">
+                    <label class="control-label">Waveform</label>
+                    <div class="button-grid">
+                        <button class="btn btn-secondary" onclick="sendCommand('#WAVE:SQ')">Square</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#WAVE:SI')">Sine</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#WAVE:TR')">Triangle</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Frequency</label>
+                    <div class="button-grid">
+                        <button class="btn btn-secondary" onclick="sendCommand('#WAVE:F=100')">100Hz</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#WAVE:F=1000')">1kHz</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#WAVE:F=10000')">10kHz</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Amplitude</label>
+                    <input type="range" id="amplitude" class="input-control" min="0" max="5" step="0.1" value="2.5">
+                    <div class="value-display">
+                        <div class="value-number" id="amp-value">2.5V</div>
+                    </div>
+                </div>
+                <div class="button-grid single">
+                    <button class="btn btn-primary" onclick="updateFunctionGenerator()">Update Settings</button>
+                </div>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">Waveform</div>
+                        <div class="status-value" id="waveform-status">Square</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Frequency</div>
+                        <div class="status-value" id="frequency-status">1000Hz</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Power Control Card -->
+            <div class="board-card" id="power-card">
+                <div class="card-header">Power Control</div>
+                <div class="control-group">
+                    <label class="control-label">Voltage Regulator</label>
+                    <input type="range" id="voltage" class="input-control" min="0" max="12" step="0.1" value="5.0">
+                    <div class="value-display">
+                        <div class="value-number" id="voltage-value">5.0V</div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Boost Converter</label>
+                    <input type="range" id="boost" class="input-control" min="0" max="85" step="1" value="50">
+                    <div class="value-display">
+                        <div class="value-number" id="boost-value">50%</div>
+                    </div>
+                </div>
+                <div class="button-grid">
+                    <button class="btn btn-secondary" onclick="sendCommand('#VREG:ON')">VReg ON</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#VREG:OFF')">VReg OFF</button>
+                </div>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">VReg</div>
+                        <div class="status-value" id="vreg-status">OFF</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Boost</div>
+                        <div class="status-value" id="boost-status">50%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DSO Card -->
+            <div class="board-card" id="dso-card">
+                <div class="card-header">DSO</div>
+                <div class="control-group">
+                    <label class="control-label">Trigger Mode</label>
+                    <div class="button-grid">
+                        <button class="btn btn-secondary" onclick="sendCommand('#TRIG:AUTO')">Auto</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#TRIG:NORMAL')">Normal</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#TRIG:SINGLE')">Single</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Timebase</label>
+                    <div class="button-grid">
+                        <button class="btn btn-secondary" onclick="sendCommand('#TIME:0.001')">0.001ms</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#TIME:0.01')">0.01ms</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('#TIME:0.1')">0.1ms</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Trigger Level</label>
+                    <input type="range" id="trigger-level" class="input-control" min="0" max="5" step="0.1" value="2.5">
+                    <div class="value-display">
+                        <div class="value-number" id="trigger-level-value">2.5V</div>
+                    </div>
+                </div>
+                <div class="button-grid">
+                    <button class="btn btn-primary" onclick="sendCommand('#TRIG:LEVEL=2.5')">Set Level</button>
+                </div>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">Mode</div>
+                        <div class="status-value" id="dso-mode">Auto</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Trigger</div>
+                        <div class="status-value" id="dso-trigger">Auto</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PID Control Card -->
+            <div class="board-card" id="pid-card">
+                <div class="card-header">PID Control</div>
+                <div class="control-group">
+                    <label class="control-label">P (Proportional)</label>
+                    <input type="number" class="input-control" id="kp" value="1.0" step="0.1" min="0" max="100">
+                </div>
+                <div class="control-group">
+                    <label class="control-label">I (Integral)</label>
+                    <input type="number" class="input-control" id="ki" value="0.1" step="0.01" min="0" max="100">
+                </div>
+                <div class="control-group">
+                    <label class="control-label">D (Derivative)</label>
+                    <input type="number" class="input-control" id="kd" value="0.05" step="0.01" min="0" max="100">
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Setpoint</label>
+                    <input type="number" class="input-control" id="setpoint" value="5.0" step="0.1" min="0" max="12">
+                </div>
+                <div class="button-grid">
+                    <button class="btn btn-primary" onclick="sendPIDCommand()">Apply Gains</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#PID:START')">Start</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#PID:STOP')">Stop</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#PID:RESET')">Reset</button>
+                </div>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">Process Value</div>
+                        <div class="status-value" id="pid-pv">0.000</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Setpoint</div>
+                        <div class="status-value" id="pid-sp">5.000</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Output</div>
+                        <div class="status-value" id="pid-output">0.000</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Error</div>
+                        <div class="status-value" id="pid-error">0.000</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Log -->
+        <div class="message-log" id="message-log">
+            <div class="message">Session-based MQTT communication log will appear here...</div>
+        </div>
+    </div>
+
+    <script>
+        // MQTT Client (session-based, matching host application)
+        let client;
+        let isConnected = false;
+        let sessionId = 'X9T4K2';
+        const brokerUrl = 'test.mosquitto.org:1883';
+
+        // Data storage for live updates
+        let voltmeterStats = { min: 0, max: 0, count: 0 };
+        let ammeterStats = { min: 0, max: 0, count: 0 };
+        let pidData = { pv: [], sp: [] };
+        let dsoData = [];
+        let maxDataPoints = 100;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up input listeners
+            document.getElementById('amplitude').addEventListener('input', function(e) {
+                document.getElementById('amp-value').textContent = e.target.value + 'V';
+            });
+
+            document.getElementById('voltage').addEventListener('input', function(e) {
+                document.getElementById('voltage-value').textContent = e.target.value + 'V';
+            });
+
+            document.getElementById('boost').addEventListener('input', function(e) {
+                document.getElementById('boost-value').textContent = e.target.value + '%';
+            });
+
+            document.getElementById('trigger-level').addEventListener('input', function(e) {
+                document.getElementById('trigger-level-value').textContent = e.target.value + 'V';
+            });
+
+            // Auto-focus session ID input
+            document.getElementById('session-id').focus();
+        });
+
+        function toggleConnection() {
+            if (isConnected) {
+                disconnectMQTT();
+            } else {
+                connectMQTT();
+            }
+        }
+
+        function connectMQTT() {
+            if (isConnected) return;
+
+            try {
+                // Get session ID from input
+                sessionId = document.getElementById('session-id').value.trim().toUpperCase();
+                
+                if (sessionId.length !== 6) {
+                    addMessage('error', 'Session ID must be exactly 6 characters');
+                    return;
+                }
+                
+                console.log('Connecting to MQTT broker with session:', sessionId);
+                
+                // Create MQTT client (matching host application)
+                client = new Paho.MQTT.Client(brokerUrl, sessionId);
+                
+                client.onConnectionLost = function(responseObject) {
+                    console.log('Connection lost:', responseObject.errorMessage);
+                    updateConnectionStatus('Reconnecting...');
+                    isConnected = false;
+                };
+
+                client.onMessageArrived = function(message) {
+                    try {
+                        const payload = message.payloadString;
+                        console.log('MQTT message received:', payload);
+                        handleMQTTMessage(payload);
+                    } catch (error) {
+                        console.error('Error parsing MQTT message:', error);
+                    }
+                };
+
+                client.connect({
+                    onSuccess: function() {
+                        isConnected = true;
+                        updateConnectionStatus('Connected');
+                        addMessage('received', `Connected with session: ${sessionId}`);
+                        
+                        // Subscribe to command topic (matching host application)
+                        const topic = `stm32lab/${sessionId}/cmds`;
+                        client.subscribe(topic, 0);
+                        
+                        // Subscribe to data topic (matching host application)
+                        const dataTopic = `stm32lab/${sessionId}/data`;
+                        client.subscribe(dataTopic, 0);
+                        
+                        // Show board interface and quick actions
+                        document.getElementById('quick-actions').style.display = 'block';
+                        document.getElementById('board-interface').style.display = 'grid';
+                        
+                        // Send initial board ID request
+                        sendCommand('#ID;');
+                        
+                        console.log('MQTT connected and subscribed to:', topic);
+                    },
+                    onFailure: function(responseObject) {
+                        console.error('MQTT connection failed:', responseObject.errorMessage);
+                        updateConnectionStatus('Connection Failed');
+                        addMessage('error', 'Connection failed: ' + responseObject.errorMessage);
+                    },
+                    useSSL: brokerUrl.startsWith('wss://'),
+                    cleanSession: true,
+                    reconnectPeriod: 5,
+                    timeout: 10
+                });
+                
+            } catch (error) {
+                console.error('Error creating MQTT client:', error);
+                updateConnectionStatus('Error');
+                addMessage('error', 'MQTT client error: ' + error.message);
+            }
+        }
+
+        function disconnectMQTT() {
+            if (isConnected && client) {
+                isConnected = false;
+                client.disconnect();
+                updateConnectionStatus('Disconnected');
+                addMessage('received', 'Disconnected from session: ' + sessionId);
+                
+                // Hide board interface
+                document.getElementById('quick-actions').style.display = 'none';
+                document.getElementById('board-interface').style.display = 'none';
+                
+                console.log('MQTT disconnected');
+            }
+        }
+
+        function sendCommand(command) {
+            if (!isConnected) {
+                addMessage('error', 'Not connected to session');
+                return;
+            }
+            
+            try {
+                const message = new Paho.MQTT.Message(command);
+                message.destinationName = `stm32lab/${sessionId}/cmds`;
+                client.send(message);
+                console.log('Command sent:', command);
+                addMessage('sent', command);
+            } catch (error) {
+                console.error('Send failed:', error);
+                addMessage('error', 'Send failed: ' + error.message);
+            }
+        }
+
+        function sendPIDCommand() {
+            const kp = document.getElementById('kp').value;
+            const ki = document.getElementById('ki').value;
+            const kd = document.getElementById('kd').value;
+            const sp = document.getElementById('setpoint').value;
+            
+            const command = `#PID:P=${kp},I=${ki},D=${kd},SP=${sp};`;
+            sendCommand(command);
+        }
+
+        function updateFunctionGenerator() {
+            const amplitude = document.getElementById('amplitude').value;
+            const command = `#WAVE:PARAMS ${amplitude},0.0`;
+            sendCommand(command);
+        }
+
+        function handleMQTTMessage(payload) {
+            try {
+                const msg = payload.trim();
+                console.log('Processing MQTT message:', msg);
+
+                // Parse different message types
+                if (msg.startsWith('#DATA:')) {
+                    handleDataMessage(msg);
+                } else if (msg.startsWith('#DSO:')) {
+                    handleDSOMessage(msg);
+                } else if (msg.startsWith('#MM:')) {
+                    handleMultimeterMessage(msg);
+                } else if (msg.startsWith('#WAVE:')) {
+                    handleFunctionGeneratorMessage(msg);
+                } else if (msg.startsWith('#PID:')) {
+                    handlePIDMessage(msg);
+                } else if (msg.startsWith('#RANGE:')) {
+                    handleRangeMessage(msg);
+                } else if (msg.startsWith('#TIME:')) {
+                    handleTimebaseMessage(msg);
+                } else if (msg.startsWith('#TRIG:')) {
+                    handleTriggerMessage(msg);
+                } else if (msg.startsWith('#VREG:')) {
+                    handleVRegulatorMessage(msg);
+                } else if (msg.startsWith('#TEMP:')) {
+                    handleTemperatureMessage(msg);
+                } else {
+                    addMessage('received', msg);
+                }
+            } catch (error) {
+                console.error('Error handling message:', error);
+            }
+        }
+
+        function handleDataMessage(msg) {
+            const match = msg.match(/#DATA:M=([A-VDGR]),X=([\d.-]+)/);
+            if (match) {
+                const mode = match[1];
+                const value = parseFloat(match[2]);
+                
+                // Update displays based on mode
+                if (mode === 'V') {
+                    updateVoltmeterData(value);
+                } else if (mode === 'A') {
+                    updateAmmeterData(value);
+                } else if (mode === 'D') {
+                    updateDSOData(value);
+                }
+            }
+        }
+
+        function handleDSOMessage(msg) {
+            const samples = msg.substring(5).split(',').map(parseFloat);
+            if (samples.length > 0) {
+                updateDSOData(samples);
+                updateDSOStats(samples);
+            }
+        }
+
+        function handleMultimeterMessage(msg) {
+            const match = msg.match(/#DATA:M=([A-VDRG]),X=([\d.-]+)/);
+            if (match) {
+                const value = parseFloat(match[2]);
+                updateMultimeterValue(value);
+            }
+        }
+
+        function handleFunctionGeneratorMessage(msg) {
+            // Parse frequency
+            const freqMatch = msg.match(/#WAVE:F=([\d.]+)/);
+            if (freqMatch) {
+                const freq = parseFloat(freqMatch[1]);
+                updateFunctionGeneratorStatus('frequency', freq);
+            }
+
+            // Parse waveform
+            if (msg.includes('SQ')) {
+                updateFunctionGeneratorStatus('waveform', 'Square');
+            } else if (msg.includes('SI')) {
+                updateFunctionGeneratorStatus('waveform', 'Sine');
+            } else if (msg.includes('TR')) {
+                updateFunctionGeneratorStatus('waveform', 'Triangle');
+            }
+
+            // Parse amplitude
+            const ampMatch = msg.match(/#WAVE:PARAMS ([\d.-]+),/);
+            if (ampMatch) {
+                const amplitude = parseFloat(ampMatch[1]);
+                updateFunctionGeneratorStatus('amplitude', amplitude);
+            }
+
+            // Parse status
+            if (msg.includes('ON')) {
+                updateFunctionGeneratorStatus('status', 'ON');
+            } else if (msg.includes('OFF')) {
+                updateFunctionGeneratorStatus('status', 'OFF');
+            }
+        }
+
+        function handlePIDMessage(msg) {
+            // Parse PID data
+            const pvMatch = msg.match(/#PID:PV=([\d.]+)/);
+            if (pvMatch) {
+                const pv = parseFloat(pvMatch[1]);
+                updatePIDStatus('pv', pv);
+            }
+
+            const spMatch = msg.match(/#PID:SP=([\d.]+)/);
+            if (spMatch) {
+                const sp = parseFloat(spMatch[1]);
+                updatePIDStatus('sp', sp);
+            }
+
+            const outputMatch = msg.match(/#PID:O=([\d.]+)/);
+            if (outputMatch) {
+                const output = parseFloat(outputMatch[1]);
+                updatePIDStatus('output', output);
+            }
+
+            const errorMatch = msg.match(/#PID:E=([\d.-]+)/);
+            if (errorMatch) {
+                const error = parseFloat(errorMatch[1]);
+                updatePIDStatus('error', error);
+            }
+        }
+
+        function handleRangeMessage(msg) {
+            const match = msg.match(/#RANGE:([A-V])=([\d.]+)/);
+            if (match) {
+                const rangeType = match[1];
+                const rangeValue = parseFloat(match[2]);
+                
+                if (rangeType === 'V') {
+                    document.getElementById('voltmeter-value').textContent = rangeValue.toFixed(3);
+                    addMessage('received', `Voltmeter range set to ${rangeValue}V`);
+                } else if (rangeType === 'A') {
+                    document.getElementById('ammeter-value').textContent = rangeValue.toFixed(3);
+                    document.getElementById('ammeter-unit').textContent = 'mA';
+                    addMessage('received', `Ammeter range set to ${rangeValue}mA`);
+                }
+            }
+        }
+
+        function handleTimebaseMessage(msg) {
+            const match = msg.match(/#TIME:([\d.]+)ms/);
+            if (match) {
+                const timebase = parseFloat(match[1]);
+                document.getElementById('timebase-value').textContent = timebase + 'ms';
+                addMessage('received', `DSO timebase set to ${timebase}ms`);
+            }
+        }
+
+        function handleTriggerMessage(msg) {
+            if (msg.includes('AUTO')) {
+                updateTriggerStatus('mode', 'AUTO');
+            } else if (msg.includes('NORMAL')) {
+                updateTriggerStatus('mode', 'NORMAL');
+            } else if (msg.includes('SINGLE')) {
+                updateTriggerStatus('mode', 'SINGLE');
+            } else if (msg.includes('LEVEL=')) {
+                const levelMatch = msg.match(/#TRIG:LEVEL=([\d.]+)/);
+                if (levelMatch) {
+                    updateTriggerStatus('level', parseFloat(levelMatch[1]));
+                }
+            }
+        }
+
+        function handleVRegulatorMessage(msg) {
+            if (msg.includes('ON')) {
+                updateVRegulatorStatus('status', 'ON');
+            } else if (msg.includes('OFF')) {
+                updateVRegulatorStatus('status', 'OFF');
+            }
+        }
+
+        function handleTemperatureMessage(msg) {
+            const match = msg.match(/#TEMP:T=([\d.-]+)/);
+            if (match) {
+                const temp = parseFloat(match[1]);
+                updateTemperatureStatus('value', temp);
+            }
+        }
+
+        // Update functions for live data
+        function updateVoltmeterData(value) {
+            const numValue = parseFloat(value);
+            
+            // Update display
+            document.getElementById('voltmeter-value').textContent = numValue.toFixed(3);
+            
+            // Update statistics
+            if (voltmeterStats.count === 0) {
+                voltmeterStats.min = numValue;
+                voltmeterStats.max = numValue;
+            } else {
+                voltmeterStats.min = Math.min(voltmeterStats.min, numValue);
+                voltmeterStats.max = Math.max(voltmeterStats.max, numValue);
+            }
+            voltmeterStats.count++;
+            
+            document.getElementById('voltmeter-min').textContent = voltmeterStats.min.toFixed(3);
+            document.getElementById('voltmeter-max').textContent = voltmeterStats.max.toFixed(3);
+        }
+
+        function updateAmmeterData(value) {
+            const numValue = parseFloat(value);
+            
+            // Update display
+            document.getElementById('ammeter-value').textContent = numValue.toFixed(3);
+            
+            // Update statistics
+            if (ammeterStats.count === 0) {
+                ammeterStats.min = numValue;
+                ammeterStats.max = numValue;
+            } else {
+                ammeterStats.min = Math.min(ammeterStats.min, numValue);
+                ammeterStats.max = Math.max(ammeterStats.max, numValue);
+            }
+            ammeterStats.count++;
+            
+            document.getElementById('ammeter-min').textContent = ammeterStats.min.toFixed(3);
+            document.getElementById('ammeter-max').textContent = ammeterStats.max.toFixed(3);
+        }
+
+        function updateDSOData(samples) {
+            dsoData = samples.slice(-maxDataPoints);
+        }
+
+        function updateDSOStats(samples) {
+            if (samples.length > 0) {
+                const vrms = Math.sqrt(samples.reduce((sum, val) => sum + val * val, 0) / samples.length);
+                const vpp = Math.max(...samples) - Math.min(...samples);
+                
+                document.getElementById('dso-vrms').querySelector('.value-number').textContent = vrms.toFixed(3);
+                document.getElementById('dso-vpp').querySelector('.value-number').textContent = vpp.toFixed(3);
+                document.getElementById('dso-samples').querySelector('.value-number').textContent = samples.length;
+            }
+        }
+
+        function updateFunctionGeneratorStatus(type, value) {
+            const element = document.getElementById(`fg-${type}`);
+            if (element) {
+                const valueElement = element.querySelector('.value-number');
+                if (valueElement) {
+                    if (typeof value === 'number') {
+                        valueElement.textContent = value.toFixed(3);
+                    } else {
+                        valueElement.textContent = value;
+                    }
+                    
+                    // Add animation
+                    element.classList.add('updating');
+                    setTimeout(() => element.classList.remove('updating'), 300);
+                }
+            }
+        }
+
+        function updateTriggerStatus(type, value) {
+            const element = document.getElementById(`dso-${type}`);
+            if (element) {
+                const valueElement = element.querySelector('.value-number');
+                if (valueElement) {
+                    valueElement.textContent = value;
+                }
+            }
+        }
+
+        function updateVRegulatorStatus(type, value) {
+            const element = document.getElementById(`vreg-${type}`);
+            if (element) {
+                const valueElement = element.querySelector('.value-number');
+                if (valueElement) {
+                    valueElement.textContent = value;
+                }
+            }
+        }
+
+        function updateTemperatureStatus(type, value) {
+            const element = document.getElementById(`temp-${type}`);
+            if (element) {
+                const valueElement = element.querySelector('.value-number');
+                if (valueElement) {
+                    valueElement.textContent = value.toFixed(1) + '°C';
+                }
+            }
+        }
+
+        function updatePIDStatus(type, value) {
+            const element = document.getElementById(`pid-${type}`);
+            if (element) {
+                const valueElement = element.querySelector('.value-number');
+                if (valueElement) {
+                    valueElement.textContent = value.toFixed(3);
+                }
+            }
+            
+            // Update PID chart data
+            if (type === 'pv') {
+                pidData.pv.push({x: Date.now() / 1000, y: value});
+                if (pidData.pv.length > maxDataPoints) {
+                    pidData.pv.shift();
+                }
+            } else if (type === 'sp') {
+                pidData.sp.push({x: Date.now() / 1000, y: value});
+                if (pidData.sp.length > maxDataPoints) {
+                    pidData.sp.shift();
+                }
+            }
+            
+            // Update PID chart
+            if (pidData.pv.length > 0 && pidData.sp.length > 0) {
+                updatePIDChart();
+            }
+        }
+
+        function updatePIDChart() {
+            // This would update a PID chart if we had one
+            // For now, just log the data
+            if (pidData.pv.length > 0 && pidData.sp.length > 0) {
+                console.log('PID Chart Data:', pidData.pv.slice(-5), pidData.sp.slice(-5));
+            }
+        }
+
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connection-status');
+            const statusDot = document.getElementById('status-dot');
+            const connectBtn = document.getElementById('connect-btn');
+            
+            if (statusElement) {
+                statusElement.textContent = status;
+            }
+            
+            if (statusDot) {
+                statusDot.className = 'status-dot';
+                if (status === 'Connected') {
+                    statusDot.classList.add('connected');
+                }
+            }
+            
+            if (connectBtn) {
+                if (status === 'Connected') {
+                    connectBtn.textContent = 'Disconnect';
+                    connectBtn.className = 'btn btn-danger';
+                } else {
+                    connectBtn.textContent = 'Connect';
+                    connectBtn.className = 'btn btn-primary';
+                }
+            }
+        }
+
+        function addMessage(type, message) {
+            const logElement = document.getElementById('message-log');
+            if (logElement) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${type}`;
+                messageDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                logElement.appendChild(messageDiv);
+                logElement.scrollTop = logElement.scrollHeight;
+                
+                // Keep only last 100 messages
+                while (logElement.children.length > 100) {
+                    logElement.removeChild(logElement.firstChild);
+                }
+            }
+        }
+
+        // Touch optimizations
+        document.addEventListener('gesturestart', function(e) {
+            if (e.scale !== 1) {
+                e.preventDefault();
+            }
+        });
+
+        // Add touch feedback
+        document.querySelectorAll('.btn').forEach(element => {
+            element.addEventListener('touchstart', function() {
+                this.style.transform = 'scale(0.95)';
+            });
+            
+            element.addEventListener('touchend', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>
