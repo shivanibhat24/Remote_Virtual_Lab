@@ -4,25 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>STM32 Lab - Mobile Interface</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <script>
-        // Check if Paho MQTT is loaded
-        if (typeof Paho === 'undefined') {
-            console.error('Paho MQTT library not loaded');
-            updateConnectionStatus('MQTT Library Error');
-            addMessage('error', 'MQTT library failed to load. Please check your internet connection and try a different browser.');
-            // Disable connect button when library not available
-            const connectBtn = document.getElementById('connect-btn');
-            if (connectBtn) {
-                connectBtn.disabled = true;
-                connectBtn.textContent = 'MQTT Library Not Available';
-                connectBtn.className = 'btn btn-secondary';
-            }
-        } else {
-            console.log('Paho MQTT library loaded successfully');
-        }
-    </script>
     <style>
         :root {
             --BG_PRIMARY: #ffffff;
@@ -961,12 +943,6 @@
         function connectMQTT() {
             if (isConnected) return;
 
-            // Check if Paho MQTT is available
-            if (typeof Paho === 'undefined') {
-                addMessage('error', 'MQTT library not available. Please refresh the page.');
-                return;
-            }
-
             try {
                 // Get session ID from input
                 sessionId = document.getElementById('session-id').value.trim().toUpperCase();
@@ -976,74 +952,227 @@
                     return;
                 }
                 
-                console.log('Connecting to MQTT broker with session:', sessionId);
+                console.log('Connecting to MQTT broker over WebSocket with session:', sessionId);
                 updateConnectionStatus('Connecting...');
                 
-                // Create MQTT client (matching host application)
-                const brokerUrl = 'test.mosquitto.org:1883';
-                client = new Paho.MQTT.Client(brokerUrl, sessionId);
+                // Create WebSocket connection to MQTT broker (no external libraries needed)
+                const mqttWebSocketUrl = 'wss://test.mosquitto.org:8081/mqtt';
+                socket = new WebSocket(mqttWebSocketUrl);
                 
-                client.onConnectionLost = function(responseObject) {
-                    console.log('Connection lost:', responseObject.errorMessage);
-                    updateConnectionStatus('Reconnecting...');
-                    isConnected = false;
-                    scheduleReconnect();
+                // MQTT connection variables
+                let messageId = 1;
+                const clientId = 'mobile_' + sessionId + '_' + Math.random().toString(16).substr(2, 8);
+                
+                socket.onopen = function() {
+                    console.log('WebSocket connected to MQTT broker');
+                    
+                    // Send MQTT CONNECT packet
+                    const connectPacket = createMQTTConnectPacket(clientId);
+                    socket.send(connectPacket);
+                    
+                    addMessage('info', 'WebSocket connected, sending MQTT CONNECT...');
                 };
-
-                client.onMessageArrived = function(message) {
+                
+                socket.onmessage = function(event) {
                     try {
-                        const payload = message.payloadString;
-                        console.log('MQTT message received:', payload);
-                        handleMQTTMessage(payload);
+                        const data = new Uint8Array(event.data);
+                        const packetType = data[0] >> 4;
+                        
+                        console.log('MQTT packet received, type:', packetType);
+                        
+                        if (packetType === 2) { // CONNACK
+                            if (data[3] === 0) { // Success
+                                isConnected = true;
+                                updateConnectionStatus('Connected');
+                                addMessage('received', `Connected with session: ${sessionId}`);
+                                
+                                // Subscribe to topics
+                                subscribeToTopic(`stm32lab/${sessionId}/cmds`);
+                                subscribeToTopic(`stm32lab/${sessionId}/data`);
+                                
+                                // Show tab navigation
+                                document.getElementById('tab-nav').style.display = 'flex';
+                                
+                                // Send initial board ID request
+                                sendCommand('#ID;');
+                                
+                                console.log('MQTT connection established');
+                            } else {
+                                addMessage('error', 'MQTT connection failed, code: ' + data[3]);
+                                updateConnectionStatus('Connection Failed');
+                            }
+                        } else if (packetType === 3) { // PUBLISH
+                            handleMQTTPublishPacket(data);
+                        } else if (packetType === 9) { // SUBACK
+                            console.log('Subscription acknowledged');
+                        }
                     } catch (error) {
-                        console.error('Error parsing MQTT message:', error);
+                        console.error('Error processing MQTT packet:', error);
                     }
                 };
-
-                client.connect({
-                    onSuccess: function() {
-                        isConnected = true;
-                        updateConnectionStatus('Connected');
-                        addMessage('received', `Connected with session: ${sessionId}`);
-                        
-                        // Subscribe to command topic (matching host application)
-                        const topic = `stm32lab/${sessionId}/cmds`;
-                        client.subscribe(topic, 0);
-                        
-                        // Subscribe to data topic (matching host application)
-                        const dataTopic = `stm32lab/${sessionId}/data`;
-                        client.subscribe(dataTopic, 0);
-                        
-                        // Show tab navigation
-                        document.getElementById('tab-nav').style.display = 'flex';
-                        
-                        // Send initial board ID request
-                        sendCommand('#ID;');
-                        
-                        console.log('MQTT connected and subscribed to:', topic);
-                    },
-                    onFailure: function(responseObject) {
-                        console.error('MQTT connection failed:', responseObject.errorMessage);
-                        updateConnectionStatus('Connection Failed');
-                        addMessage('error', 'Connection failed: ' + responseObject.errorMessage);
-                    },
-                    useSSL: false,
-                    cleanSession: true,
-                    reconnectPeriod: 5,
-                    timeout: 10
-                });
+                
+                socket.onclose = function() {
+                    if (isConnected) {
+                        console.log('MQTT WebSocket connection closed');
+                        updateConnectionStatus('Connection Lost');
+                        addMessage('received', 'Connection lost. Attempting to reconnect...');
+                        scheduleReconnect();
+                    }
+                };
+                
+                socket.onerror = function(error) {
+                    console.error('MQTT WebSocket error:', error);
+                    updateConnectionStatus('Connection Error');
+                    addMessage('error', 'Connection failed. Please check your internet connection and try again.');
+                    scheduleReconnect();
+                };
                 
             } catch (error) {
-                console.error('Error creating MQTT client:', error);
+                console.error('Error creating MQTT WebSocket client:', error);
                 updateConnectionStatus('Error');
-                addMessage('error', 'MQTT client error: ' + error.message);
+                addMessage('error', 'Connection error: ' + error.message);
             }
         }
 
+        function createMQTTConnectPacket(clientId) {
+            // MQTT CONNECT packet (simplified)
+            const protocolName = 'MQTT';
+            const protocolLevel = 4; // MQTT 3.1.1
+            const connectFlags = 0x02; // Clean session
+            const keepAlive = 60;
+            
+            const payload = clientId;
+            const packetLength = 10 + protocolName.length + 2 + payload.length + 2;
+            
+            const packet = new Uint8Array(packetLength);
+            let offset = 0;
+            
+            // Fixed header
+            packet[offset++] = 0x10; // CONNECT packet type
+            packet[offset++] = packetLength - 2; // Remaining length
+            
+            // Variable header
+            packet[offset++] = 0; // MSB of protocol name length
+            packet[offset++] = protocolName.length; // LSB of protocol name length
+            for (let i = 0; i < protocolName.length; i++) {
+                packet[offset++] = protocolName.charCodeAt(i);
+            }
+            packet[offset++] = protocolLevel;
+            packet[offset++] = connectFlags;
+            packet[offset++] = keepAlive >> 8; // MSB of keep alive
+            packet[offset++] = keepAlive & 0xFF; // LSB of keep alive
+            
+            // Payload
+            packet[offset++] = 0; // MSB of client ID length
+            packet[offset++] = payload.length; // LSB of client ID length
+            for (let i = 0; i < payload.length; i++) {
+                packet[offset++] = payload.charCodeAt(i);
+            }
+            
+            return packet;
+        }
+
+        function subscribeToTopic(topic) {
+            if (!isConnected || !socket) return;
+            
+            const packetType = 8; // SUBSCRIBE
+            const topicFilter = topic;
+            const qos = 0;
+            
+            const packetLength = 2 + 2 + topicFilter.length + 1;
+            const packet = new Uint8Array(packetLength);
+            
+            let offset = 0;
+            packet[offset++] = (packetType << 4) | 0x02; // SUBSCRIBE packet with QoS 1
+            packet[offset++] = packetLength - 2; // Remaining length
+            
+            // Variable header (packet identifier)
+            const messageId = getNextMessageId();
+            packet[offset++] = messageId >> 8; // MSB
+            packet[offset++] = messageId & 0xFF; // LSB
+            
+            // Payload
+            packet[offset++] = 0; // MSB of topic filter length
+            packet[offset++] = topicFilter.length; // LSB of topic filter length
+            for (let i = 0; i < topicFilter.length; i++) {
+                packet[offset++] = topicFilter.charCodeAt(i);
+            }
+            packet[offset++] = qos; // Requested QoS
+            
+            socket.send(packet);
+            addMessage('info', `Subscribed to topic: ${topic}`);
+        }
+
+        function handleMQTTPublishPacket(data) {
+            try {
+                let offset = 0;
+                const dup = (data[offset] & 0x08) !== 0;
+                const qos = (data[offset] >> 1) & 0x03;
+                const retain = (data[offset] & 0x01) !== 0;
+                offset++;
+                
+                const remainingLength = decodeRemainingLength(data, offset);
+                offset += getRemainingLengthBytes(remainingLength);
+                
+                // Topic name
+                const topicLength = (data[offset] << 8) | data[offset + 1];
+                offset += 2;
+                const topic = String.fromCharCode.apply(null, data.slice(offset, offset + topicLength));
+                offset += topicLength;
+                
+                // Packet identifier (only for QoS 1 and 2)
+                if (qos > 0) {
+                    offset += 2;
+                }
+                
+                // Payload
+                const payload = String.fromCharCode.apply(null, data.slice(offset));
+                
+                console.log('MQTT message received on topic:', topic, 'payload:', payload);
+                handleMQTTMessage(payload);
+                
+            } catch (error) {
+                console.error('Error handling MQTT PUBLISH packet:', error);
+            }
+        }
+
+        function decodeRemainingLength(data, offset) {
+            let multiplier = 1;
+            let length = 0;
+            let encodedByte;
+            
+            do {
+                if (offset >= data.length) break;
+                encodedByte = data[offset++];
+                length += (encodedByte & 0x7F) * multiplier;
+                multiplier *= 128;
+            } while ((encodedByte & 0x80) !== 0);
+            
+            return length;
+        }
+
+        function getRemainingLengthBytes(length) {
+            let bytes = 0;
+            do {
+                bytes++;
+                length >>= 7;
+            } while (length > 0);
+            return bytes;
+        }
+
+        function getNextMessageId() {
+            return messageId = (messageId % 65535) + 1;
+        }
+
         function disconnectMQTT() {
-            if (isConnected && client) {
+            if (isConnected && socket) {
                 isConnected = false;
-                client.disconnect();
+                
+                // Send MQTT DISCONNECT packet
+                const disconnectPacket = new Uint8Array([0xE0, 0x00]); // DISCONNECT packet
+                socket.send(disconnectPacket);
+                
+                socket.close();
                 updateConnectionStatus('Disconnected');
                 addMessage('received', 'Disconnected from session: ' + sessionId);
                 
@@ -1078,15 +1207,66 @@
             }
             
             try {
-                const message = new Paho.MQTT.Message(command);
-                message.destinationName = `stm32lab/${sessionId}/cmds`;
-                client.send(message);
-                console.log('Command sent:', command);
+                // Send MQTT PUBLISH packet
+                const topic = `stm32lab/${sessionId}/cmds`;
+                const publishPacket = createMQTTPublishPacket(topic, command);
+                socket.send(publishPacket);
+                
+                console.log('Command sent via MQTT:', command);
                 addMessage('sent', command);
             } catch (error) {
                 console.error('Send failed:', error);
                 addMessage('error', 'Send failed: ' + error.message);
             }
+        }
+
+        function createMQTTPublishPacket(topic, payload) {
+            const packetType = 3; // PUBLISH
+            const qos = 0;
+            const retain = false;
+            
+            const topicBytes = new TextEncoder().encode(topic);
+            const payloadBytes = new TextEncoder().encode(payload);
+            
+            const remainingLength = 2 + topicBytes.length + payloadBytes.length;
+            const packetLength = 1 + getRemainingLengthBytes(remainingLength) + remainingLength;
+            
+            const packet = new Uint8Array(packetLength);
+            let offset = 0;
+            
+            // Fixed header
+            packet[offset++] = (packetType << 4) | (qos << 1) | (retain ? 1 : 0);
+            offset += encodeRemainingLength(packet, offset, remainingLength);
+            
+            // Variable header
+            packet[offset++] = topicBytes.length >> 8; // MSB of topic length
+            packet[offset++] = topicBytes.length & 0xFF; // LSB of topic length
+            
+            // Topic name
+            for (let i = 0; i < topicBytes.length; i++) {
+                packet[offset++] = topicBytes[i];
+            }
+            
+            // Payload
+            for (let i = 0; i < payloadBytes.length; i++) {
+                packet[offset++] = payloadBytes[i];
+            }
+            
+            return packet;
+        }
+
+        function encodeRemainingLength(packet, offset, length) {
+            let bytes = 0;
+            do {
+                let encodedByte = length % 128;
+                length = Math.floor(length / 128);
+                if (length > 0) {
+                    encodedByte |= 0x80;
+                }
+                packet[offset++] = encodedByte;
+                bytes++;
+            } while (length > 0);
+            return bytes;
         }
 
         function sendPIDCommand() {
