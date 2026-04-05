@@ -114,9 +114,43 @@ class ConnectionTab(QWidget):
             self._header_strip.update_theme()
 
     def _on_connect(self):
-        port = self.cmb_port.currentText()
-        if port:
-            self.connect_requested.emit(port)
+        port_text = self.cmb_port.currentText()
+        if not port_text:
+            return
+        
+        # Extract actual port name from descriptive text
+        port = port_text.split(' - ')[0] if ' - ' in port_text else port_text
+        
+        # Validate it's an STM32 device
+        if not self._is_stm32_device(port):
+            self.log(f"Port {port} is not a recognized STM32 device", T.ACCENT_AMBER)
+            return
+        
+        self.connect_requested.emit(port)
+    
+    def _is_stm32_device(self, port: str) -> bool:
+        """Check if the connected device is actually an STM32 board."""
+        try:
+            import serial.tools.list_ports
+            port_info = None
+            for p in serial.tools.list_ports.comports():
+                if p.device == port:
+                    port_info = p
+                    break
+            
+            if not port_info:
+                return False
+            
+            # Check for common STM32 VID/PID combinations
+            stm32_vids = [0x0483, 0x2341, 0x2A03]  # STMicroelectronics, Arduino, etc.
+            is_stm32 = (port_info.vid in stm32_vids or 
+                      'STM32' in port_info.description.upper() or 
+                      'STLINK' in port_info.description.upper() or
+                      'COM PORT' in port_info.description.upper())
+            
+            return is_stm32
+        except:
+            return False
 
     def set_connected(self, port: str):
         self.btn_connect.setEnabled(False)

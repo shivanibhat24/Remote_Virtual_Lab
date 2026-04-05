@@ -742,20 +742,25 @@ class MainWindow(QMainWindow):
 
     # -- Serial ------------------------------------------------------------
 
-    def _on_connect(self, port: str):
-        if not port:
-            return
-        if self._serial.connect(port):
-            self.tab_conn.set_connected(port)
-            self.tab_conn.log(f"Connected to {port} @ 115200 baud", T.PRIMARY)
-            self.lbl_sb_conn.setText(f"ONLINE  {port}")
-            self.lbl_sb_conn.setStyleSheet(
-                f"color: {T.PRIMARY}; font-family: {T.FONT_MONO}; font-size: {SZ_SM}px;"
-)
-            self._auto_reconnect_port = port
-            self._settings.set("last_port", port)
-        else:
-            self.tab_conn.log(f"Failed to connect to {port}", T.ACCENT_RED)
+    def _on_connect(self, port: str) -> bool:
+        """Connect to serial port with proper error handling and verification."""
+        try:
+            if self._serial.connect(port):
+                self.tab_conn.set_connected(port)
+                self.tab_conn.log(f"Connected to {port} @ 115200 baud", T.PRIMARY)
+                self.lbl_sb_conn.setText(f"ONLINE  {port}")
+                self.lbl_sb_conn.setStyleSheet(
+                    f"color: {T.PRIMARY}; font-family: {T.FONT_MONO}; font-size: {SZ_SM}px;"
+                )
+                self._auto_reconnect_port = port
+                self._settings.set("last_port", port)
+                return True
+            else:
+                self.tab_conn.log(f"Failed to connect to {port}", T.ACCENT_RED)
+                return False
+        except Exception as e:
+            self.tab_conn.log(f"Connection error: {str(e)}", T.ACCENT_RED)
+            return False
 
     def _on_disconnect(self):
         self._serial.disconnect()
@@ -770,18 +775,135 @@ class MainWindow(QMainWindow):
             self._auto_reconnect_timer.start()
 
     def _try_reconnect(self):
-        """Attempt to reconnect to the last known port (1 s polling)."""
+        """Attempt to reconnect to the last known port (1 s polling) only if board is actually connected."""
         if self._serial.is_connected:
             self._auto_reconnect_timer.stop()
             return
+        
+        # Check if the port actually exists and has a valid STM32 board
         ports = SerialManager.list_ports()
-        if self._auto_reconnect_port in ports:
+        if self._auto_reconnect_port not in ports:
+            # Port doesn't exist, stop trying
+            self._auto_reconnect_timer.stop()
+            self.tab_conn.log(f"Auto-reconnect: Port {self._auto_reconnect_port} no longer available", T.ACCENT_AMBER)
+            return
+        
+        # Additional check: verify it's actually an STM32 board by checking VID/PID
+        try:
+            port_info = None
+            for p in serial.tools.list_ports.comports():
+                if p.device == self._auto_reconnect_port:
+                    port_info = p
+                    break
+            
+            if port_info:
+                # Check for common STM32 VID/PID combinations
+                stm32_vids = [0x0483, 0x2341, 0x2A03]  # STMicroelectronics, Arduino, etc.
+                is_stm32 = port_info.vid in stm32_vids or ('STM32' in port_info.description.upper() or 
+                                                            'STLINK' in port_info.description.upper() or
+                                                            'COM PORT' in port_info.description.upper())
+                
+                if not is_stm32:
+                    self._auto_reconnect_timer.stop()
+                    self.tab_conn.log(f"Auto-reconnect: {self._auto_reconnect_port} is not an STM32 device", T.ACCENT_AMBER)
+                    return
+            
+            # Try to connect with timeout verification
             log.info(f"Auto-reconnect: {self._auto_reconnect_port}")
             self._auto_reconnect_timer.stop()
-            self._on_connect(self._auto_reconnect_port)
+            
+            # Attempt connection with verification
+            if self._on_connect(self._auto_reconnect_port):
+                # Verify the connection is actually working by sending a test command
+                QTimer.singleShot(500, self._verify_connection)
+            
+        except Exception as e:
+            log.error(f"Auto-reconnect error: {e}")
+            self._auto_reconnect_timer.stop()
+    
+    def _verify_connection(self):
+        """Verify that the connection is actually working by sending a test command."""
+        if not self._serial.is_connected:
+            return
+        
+        # Reset message counter to track new messages
+        self._msg_count = 0
+        
+        # Send a simple identification command
+        self._send_command("ID;")
+        
+        # If we don't get a response within 2 seconds, disconnect
+        QTimer.singleShot(2000, self._check_connection_response)
+    
+    def _check_connection_response(self):
+        """Check if we received a response to the test command."""
+        if not self._serial.is_connected:
+            return
+        
+        # If we're still "connected" but haven't received proper data, disconnect
+        # This prevents hanging on non-responsive ports
+        if self._msg_count == 0:  # No messages received since connection attempt
+            self.tab_conn.log("Connection test failed - no response from device", T.ACCENT_RED)
+            self._on_disconnect()
+        else:
+            self.tab_conn.log("Connection verified - device responding", T.PRIMARY)
 
     def _refresh_ports(self):
-        self.tab_conn.update_ports(SerialManager.list_ports())
+        ports = SerialManager.list_ports()
+        # Filter out non-STM32 devices and add descriptive names
+        filtered_ports = []
+        for port in ports:
+            try:
+                port_info = None
+                for p in serial.tools.list_ports.comports():
+                    if p.device == port:
+                        port_info = p
+                        break
+                
+                if port_info:
+                    # Check for common STM32 VID/PID combinations
+                    stm32_vids = [0x0483, 0x2341, 0x2A03]  # STMicroelectronics, Arduino, etc.
+                    is_stm32 = (port_info.vid in stm32_vids or 
+                              'STM32' in port_info.description.upper() or 
+                              'STLINK' in port_info.description.upper() or
+                              'COM PORT' in port_info.description.upper())
+                    
+                    if is_stm32:
+                        # Add descriptive name
+                        desc = f"{port} - {port_info.description}"
+                        filtered_ports.append(desc)
+                    else:
+                        # Still add the port but mark it as non-STM32
+                        filtered_ports.append(port)
+                else:
+                    filtered_ports.append(port)
+            except:
+                filtered_ports.append(port)
+        
+        self.tab_conn.update_ports(filtered_ports)
+
+    def _is_stm32_device(self, port: str) -> bool:
+        """Check if the connected device is actually an STM32 board."""
+        try:
+            port_info = None
+            for p in serial.tools.list_ports.comports():
+                if p.device == port:
+                    port_info = p
+                    break
+            
+            if not port_info:
+                return False
+            
+            # Check for common STM32 VID/PID combinations
+            stm32_vids = [0x0483, 0x2341, 0x2A03]  # STMicroelectronics, Arduino, etc.
+            is_stm32 = (port_info.vid in stm32_vids or 
+                      'STM32' in port_info.description.upper() or 
+                      'STLINK' in port_info.description.upper() or
+                      'COM PORT' in port_info.description.upper())
+            
+            return is_stm32
+        except:
+            return False
 
     def _send_command(self, cmd: str):
         self._serial.send(cmd)
