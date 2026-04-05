@@ -480,7 +480,225 @@ def decode_nrz(samples: np.ndarray, threshold: float, sample_rate: float) -> Lis
     return results
 
 
-PROTOCOL_NAMES = ("I2C", "SPI", "UART", "1-Wire", "CAN", "LIN", "PWM", "Manchester", "NRZ")
+def decode_dht(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """DHT11/22 sensor protocol: start pulse + 40 data bits."""
+    digital = _to_digital(samples, threshold)
+    results: List[Dict] = []
+    n = len(digital)
+    
+    # DHT start signal: host pulls low >18ms, then high 20-40µs
+    min_start_samples = int(0.018 * sample_rate) if sample_rate > 0 else 1800
+    
+    i = 0
+    while i < n - 80:
+        # Look for start sequence (long low pulse)
+        if i > 0 and digital[i - 1] == 1 and digital[i] == 0:
+            j = i
+            while j < n and digital[j] == 0:
+                j += 1
+            low_samples = j - i
+            
+            if low_samples >= min_start_samples:
+                # Look for response from sensor
+                if j + 40 < n:
+                    # DHT responds with ~80µs low then ~80µs high
+                    response_ok = True
+                    # Check for response pattern
+                    if j + 20 < n and digital[j + 20] == 1:
+                        t_ms = i / sample_rate * 1000
+                        results.append({
+                            "proto": "DHT",
+                            "time_ms": f"{t_ms:.2f}",
+                            "info": f"START {low_samples} samples",
+                            "ack": "-",
+                            "crc": "-",
+                        })
+                        i = j + 40
+                        continue
+        i += 1
+        
+    return results
+
+
+def decode_dmx512(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """DMX512 protocol: break + MAB + 512 slots."""
+    digital = _to_digital(samples, threshold)
+    results: List[Dict] = []
+    n = len(digital)
+    
+    # DMX break: 88µs low, MAB: 8µs high
+    break_samples = int(0.000088 * sample_rate) if sample_rate > 0 else 88
+    mab_samples = int(0.000008 * sample_rate) if sample_rate > 0 else 8
+    
+    i = 0
+    while i < n:
+        if i > 0 and digital[i - 1] == 1 and digital[i] == 0:
+            j = i
+            while j < n and digital[j] == 0:
+                j += 1
+            low_samples = j - i
+            
+            if abs(low_samples - break_samples) <= break_samples // 2:
+                # Check for MAB
+                if j + mab_samples < n:
+                    high_count = sum(1 for k in range(j, min(j + mab_samples, n)) if digital[k] == 1)
+                    if high_count > mab_samples // 2:
+                        t_ms = i / sample_rate * 1000
+                        results.append({
+                            "proto": "DMX512",
+                            "time_ms": f"{t_ms:.2f}",
+                            "info": f"BREAK+MAB {low_samples} samples",
+                            "ack": "-",
+                            "crc": "-",
+                        })
+                        i = j + mab_samples + 100  # Skip data area
+                        continue
+        i += 1
+        
+    return results
+
+
+def decode_nec_ir(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """NEC IR protocol: 9ms leading pulse + 4.5ms space + data."""
+    digital = _to_digital(samples, threshold)
+    results: List[Dict] = []
+    n = len(digital)
+    
+    # NEC timing: 9ms lead pulse, 4.5ms space
+    lead_samples = int(0.009 * sample_rate) if sample_rate > 0 else 900
+    space_samples = int(0.0045 * sample_rate) if sample_rate > 0 else 450
+    
+    i = 0
+    while i < n:
+        # Look for NEC leading pulse
+        if i > 0 and digital[i - 1] == 1 and digital[i] == 0:
+            j = i
+            while j < n and digital[j] == 0:
+                j += 1
+            pulse_samples = j - i
+            
+            if abs(pulse_samples - lead_samples) <= lead_samples // 4:
+                # Look for space
+                k = j
+                while k < n and digital[k] == 1:
+                    k += 1
+                space_pulse_samples = k - j
+                
+                if abs(space_pulse_samples - space_samples) <= space_samples // 4:
+                    t_ms = i / sample_rate * 1000
+                    results.append({
+                        "proto": "NEC IR",
+                        "time_ms": f"{t_ms:.2f}",
+                        "info": f"LEAD {pulse_samples} SPACE {space_pulse_samples}",
+                        "ack": "-",
+                        "crc": "-",
+                    })
+                    i = k + 200  # Skip data area
+                    continue
+        i += 1
+        
+    return results
+
+
+def decode_rc5_ir(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """RC5 IR protocol: Manchester encoding with specific timing."""
+    digital = _to_digital(samples, threshold)
+    edges = _find_edges(digital)
+    results: List[Dict] = []
+    
+    if len(edges) < 10:
+        return results
+        
+    # RC5 bit time is 1.778ms (64/36kHz)
+    bit_samples = int(0.001778 * sample_rate) if sample_rate > 0 else 1778
+    
+    # Look for RC5 pattern (2 start bits + toggle + address + command)
+    for i in range(len(edges) - 10):
+        # Check if we have regular RC5 timing
+        valid_timing = True
+        for j in range(5):
+            if i + j + 1 >= len(edges):
+                valid_timing = False
+                break
+            interval = abs(edges[i + j + 1][0] - edges[i + j][0] - bit_samples)
+            if interval > bit_samples // 2:
+                valid_timing = False
+                break
+                
+        if valid_timing:
+            t_ms = edges[i][0] / sample_rate * 1000
+            results.append({
+                "proto": "RC5 IR",
+                "time_ms": f"{t_ms:.2f}",
+                "info": f"RC5 pattern detected",
+                "ack": "-",
+                "crc": "-",
+            })
+            break
+            
+    return results
+
+
+def decode_ws2812b(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """WS2812B NeoPixel: reset pulse + data bits with specific timing."""
+    digital = _to_digital(samples, threshold)
+    results: List[Dict] = []
+    n = len(digital)
+    
+    # WS2812B reset: >50µs low
+    reset_samples = int(0.000050 * sample_rate) if sample_rate > 0 else 50
+    
+    i = 0
+    while i < n:
+        if i > 0 and digital[i - 1] == 1 and digital[i] == 0:
+            j = i
+            while j < n and digital[j] == 0:
+                j += 1
+            low_samples = j - i
+            
+            if low_samples >= reset_samples:
+                t_ms = i / sample_rate * 1000
+                results.append({
+                    "proto": "WS2812B",
+                    "time_ms": f"{t_ms:.2f}",
+                    "info": f"RESET {low_samples} samples",
+                    "ack": "-",
+                    "crc": "-",
+                })
+                i = j
+                continue
+                
+            # Look for data bits (0.35µs high + 0.8µs low for '0', 0.7µs high + 0.6µs low for '1')
+            if j + 2 < n and digital[j] == 1:
+                k = j
+                while k < n and digital[k] == 1:
+                    k += 1
+                high_samples = k - j
+                
+                l = k
+                while l < n and digital[l] == 0:
+                    l += 1
+                low_samples = l - k
+                
+                if high_samples > 0 and low_samples > 0:
+                    bit_val = 1 if high_samples > low_samples else 0
+                    t_ms = j / sample_rate * 1000
+                    results.append({
+                        "proto": "WS2812B",
+                        "time_ms": f"{t_ms:.2f}",
+                        "info": f"BIT {bit_val} ({high_samples}/{low_samples})",
+                        "ack": "-",
+                        "crc": "-",
+                    })
+                    i = l
+                    continue
+        i += 1
+        
+    return results
+
+
+PROTOCOL_NAMES = ("I2C", "SPI", "UART", "1-Wire", "CAN", "LIN", "PWM", "Manchester", "NRZ", 
+                 "DHT", "DMX512", "NEC IR", "RC5 IR", "WS2812B")
 
 
 # 
@@ -836,6 +1054,16 @@ class ProtocolDecoderTab(QWidget):
             results = decode_manchester(samples, threshold, sample_rate)
         elif proto == "NRZ":
             results = decode_nrz(samples, threshold, sample_rate)
+        elif proto == "DHT":
+            results = decode_dht(samples, threshold, sample_rate)
+        elif proto == "DMX512":
+            results = decode_dmx512(samples, threshold, sample_rate)
+        elif proto == "NEC IR":
+            results = decode_nec_ir(samples, threshold, sample_rate)
+        elif proto == "RC5 IR":
+            results = decode_rc5_ir(samples, threshold, sample_rate)
+        elif proto == "WS2812B":
+            results = decode_ws2812b(samples, threshold, sample_rate)
         else:
             results = []
 
@@ -846,7 +1074,9 @@ class ProtocolDecoderTab(QWidget):
             "UART": T.ACCENT_AMBER, "1-Wire": T.ACCENT_PUR,
             "CAN": T.ACCENT_CYAN, "LIN": T.ACCENT_RED,
             "PWM": T.PRIMARY, "Manchester": T.ACCENT_BLUE,
-            "NRZ": T.TEXT_MUTED
+            "NRZ": T.TEXT_MUTED, "DHT": T.ACCENT_AMBER,
+            "DMX512": T.ACCENT_CYAN, "NEC IR": T.ACCENT_RED,
+            "RC5 IR": T.ACCENT_PUR, "WS2812B": T.PRIMARY
         }
         col = colors.get(proto, T.TEXT)
 
