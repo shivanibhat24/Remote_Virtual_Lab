@@ -480,225 +480,294 @@ def decode_nrz(samples: np.ndarray, threshold: float, sample_rate: float) -> Lis
     return results
 
 
-def decode_dht(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
-    """DHT11/22 sensor protocol: start pulse + 40 data bits."""
-    digital = _to_digital(samples, threshold)
-    results: List[Dict] = []
-    n = len(digital)
-    
-    # DHT start signal: host pulls low >18ms, then high 20-40µs
-    min_start_samples = int(0.018 * sample_rate) if sample_rate > 0 else 1800
-    
-    i = 0
-    while i < n - 80:
-        # Look for start sequence (long low pulse)
-        if i > 0 and digital[i - 1] == 1 and digital[i] == 0:
-            j = i
-            while j < n and digital[j] == 0:
-                j += 1
-            low_samples = j - i
-            
-            if low_samples >= min_start_samples:
-                # Look for response from sensor
-                if j + 40 < n:
-                    # DHT responds with ~80µs low then ~80µs high
-                    response_ok = True
-                    # Check for response pattern
-                    if j + 20 < n and digital[j + 20] == 1:
-                        t_ms = i / sample_rate * 1000
-                        results.append({
-                            "proto": "DHT",
-                            "time_ms": f"{t_ms:.2f}",
-                            "info": f"START {low_samples} samples",
-                            "ack": "-",
-                            "crc": "-",
-                        })
-                        i = j + 40
-                        continue
-        i += 1
-        
-    return results
-
-
-def decode_dmx512(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
-    """DMX512 protocol: break + MAB + 512 slots."""
-    digital = _to_digital(samples, threshold)
-    results: List[Dict] = []
-    n = len(digital)
-    
-    # DMX break: 88µs low, MAB: 8µs high
-    break_samples = int(0.000088 * sample_rate) if sample_rate > 0 else 88
-    mab_samples = int(0.000008 * sample_rate) if sample_rate > 0 else 8
-    
-    i = 0
-    while i < n:
-        if i > 0 and digital[i - 1] == 1 and digital[i] == 0:
-            j = i
-            while j < n and digital[j] == 0:
-                j += 1
-            low_samples = j - i
-            
-            if abs(low_samples - break_samples) <= break_samples // 2:
-                # Check for MAB
-                if j + mab_samples < n:
-                    high_count = sum(1 for k in range(j, min(j + mab_samples, n)) if digital[k] == 1)
-                    if high_count > mab_samples // 2:
-                        t_ms = i / sample_rate * 1000
-                        results.append({
-                            "proto": "DMX512",
-                            "time_ms": f"{t_ms:.2f}",
-                            "info": f"BREAK+MAB {low_samples} samples",
-                            "ack": "-",
-                            "crc": "-",
-                        })
-                        i = j + mab_samples + 100  # Skip data area
-                        continue
-        i += 1
-        
-    return results
-
-
-def decode_nec_ir(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
-    """NEC IR protocol: 9ms leading pulse + 4.5ms space + data."""
-    digital = _to_digital(samples, threshold)
-    results: List[Dict] = []
-    n = len(digital)
-    
-    # NEC timing: 9ms lead pulse, 4.5ms space
-    lead_samples = int(0.009 * sample_rate) if sample_rate > 0 else 900
-    space_samples = int(0.0045 * sample_rate) if sample_rate > 0 else 450
-    
-    i = 0
-    while i < n:
-        # Look for NEC leading pulse
-        if i > 0 and digital[i - 1] == 1 and digital[i] == 0:
-            j = i
-            while j < n and digital[j] == 0:
-                j += 1
-            pulse_samples = j - i
-            
-            if abs(pulse_samples - lead_samples) <= lead_samples // 4:
-                # Look for space
-                k = j
-                while k < n and digital[k] == 1:
-                    k += 1
-                space_pulse_samples = k - j
-                
-                if abs(space_pulse_samples - space_samples) <= space_samples // 4:
-                    t_ms = i / sample_rate * 1000
-                    results.append({
-                        "proto": "NEC IR",
-                        "time_ms": f"{t_ms:.2f}",
-                        "info": f"LEAD {pulse_samples} SPACE {space_pulse_samples}",
-                        "ack": "-",
-                        "crc": "-",
-                    })
-                    i = k + 200  # Skip data area
-                    continue
-        i += 1
-        
-    return results
-
-
-def decode_rc5_ir(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
-    """RC5 IR protocol: Manchester encoding with specific timing."""
+def decode_modbus(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """Modbus RTU protocol: 3.5 char silence + start bit + 8 data bits + parity + stop."""
     digital = _to_digital(samples, threshold)
     edges = _find_edges(digital)
     results: List[Dict] = []
+    n = len(digital)
     
-    if len(edges) < 10:
-        return results
-        
-    # RC5 bit time is 1.778ms (64/36kHz)
-    bit_samples = int(0.001778 * sample_rate) if sample_rate > 0 else 1778
+    # Modbus RTU timing: 3.5 character times of silence before transmission
+    # Assuming typical 9600 baud, char time = ~1.04ms, 3.5 chars = ~3.6ms
+    min_silence_samples = int(0.0036 * sample_rate) if sample_rate > 0 else 360
     
-    # Look for RC5 pattern (2 start bits + toggle + address + command)
-    for i in range(len(edges) - 10):
-        # Check if we have regular RC5 timing
-        valid_timing = True
-        for j in range(5):
-            if i + j + 1 >= len(edges):
-                valid_timing = False
-                break
-            interval = abs(edges[i + j + 1][0] - edges[i + j][0] - bit_samples)
-            if interval > bit_samples // 2:
-                valid_timing = False
-                break
+    # Look for Modbus frame pattern
+    for i, (idx, kind) in enumerate(edges):
+        if kind != "falling":  # Start bit is falling edge
+            continue
+            
+        # Check for preceding silence
+        if idx < min_silence_samples:
+            continue
+            
+        # Look for typical Modbus frame (at least 8 bits for address + function)
+        if i + 16 >= len(edges):
+            continue
+            
+        # Estimate bit time from edge spacing
+        if i + 1 < len(edges):
+            next_edge = edges[i + 1][0]
+            bit_time = next_edge - idx
+            if bit_time < 10 or bit_time > n // 100:
+                continue
+        else:
+            continue
+            
+        # Extract first 16 bits (address + function code)
+        bits = []
+        for bit_idx in range(16):
+            sample_pos = idx + bit_idx * bit_time // 2
+            if sample_pos < n:
+                bits.append(int(digital[sample_pos]))
+            else:
+                bits.append(1)
                 
-        if valid_timing:
-            t_ms = edges[i][0] / sample_rate * 1000
+        if len(bits) >= 16:
+            address = sum(bits[0 + i] << (7 - i) for i in range(8))
+            function = sum(bits[8 + i] << (7 - i) for i in range(8))
+            t_ms = idx / sample_rate * 1000
             results.append({
-                "proto": "RC5 IR",
+                "proto": "Modbus",
                 "time_ms": f"{t_ms:.2f}",
-                "info": f"RC5 pattern detected",
+                "info": f"ADDR:0x{address:02X} FUNC:0x{function:02X}",
                 "ack": "-",
                 "crc": "-",
             })
-            break
             
     return results
 
 
-def decode_ws2812b(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
-    """WS2812B NeoPixel: reset pulse + data bits with specific timing."""
+def decode_profibus(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """Profibus DP protocol: SD1 start delimiter + DA + SA + FC + data."""
     digital = _to_digital(samples, threshold)
+    edges = _find_edges(digital)
     results: List[Dict] = []
     n = len(digital)
     
-    # WS2812B reset: >50µs low
-    reset_samples = int(0.000050 * sample_rate) if sample_rate > 0 else 50
-    
-    i = 0
-    while i < n:
-        if i > 0 and digital[i - 1] == 1 and digital[i] == 0:
-            j = i
-            while j < n and digital[j] == 0:
-                j += 1
-            low_samples = j - i
+    # Profibus SD1 start delimiter: 0x10 pattern
+    # Look for characteristic Profibus patterns
+    for i, (idx, kind) in enumerate(edges):
+        if kind != "falling":
+            continue
             
-            if low_samples >= reset_samples:
-                t_ms = i / sample_rate * 1000
-                results.append({
-                    "proto": "WS2812B",
-                    "time_ms": f"{t_ms:.2f}",
-                    "info": f"RESET {low_samples} samples",
-                    "ack": "-",
-                    "crc": "-",
-                })
-                i = j
+        if i + 8 >= len(edges):
+            continue
+            
+        # Estimate bit time (Profibus typically 9.6k to 12M baud)
+        if i + 1 < len(edges):
+            next_edge = edges[i + 1][0]
+            bit_time = next_edge - idx
+            if bit_time < 5 or bit_time > n // 50:
                 continue
+        else:
+            continue
+            
+        # Look for SD1 pattern (0x10 = 00010000)
+        bits = []
+        for bit_idx in range(8):
+            sample_pos = idx + bit_idx * bit_time // 2
+            if sample_pos < n:
+                bits.append(int(digital[sample_pos]))
+            else:
+                bits.append(0)
                 
-            # Look for data bits (0.35µs high + 0.8µs low for '0', 0.7µs high + 0.6µs low for '1')
-            if j + 2 < n and digital[j] == 1:
-                k = j
-                while k < n and digital[k] == 1:
-                    k += 1
-                high_samples = k - j
-                
-                l = k
-                while l < n and digital[l] == 0:
-                    l += 1
-                low_samples = l - k
-                
-                if high_samples > 0 and low_samples > 0:
-                    bit_val = 1 if high_samples > low_samples else 0
-                    t_ms = j / sample_rate * 1000
+        if len(bits) >= 8:
+            byte_val = sum(bits[i] << (7 - i) for i in range(8))
+            if byte_val == 0x10:  # SD1 found
+                # Extract DA and SA
+                if i + 24 < len(edges):
+                    da_bits = []
+                    sa_bits = []
+                    for bit_idx in range(8):
+                        da_pos = idx + (8 + bit_idx) * bit_time // 2
+                        sa_pos = idx + (16 + bit_idx) * bit_time // 2
+                        if da_pos < n and sa_pos < n:
+                            da_bits.append(int(digital[da_pos]))
+                            sa_bits.append(int(digital[sa_pos]))
+                    
+                    da = sum(da_bits[i] << (7 - i) for i in range(8)) if len(da_bits) == 8 else 0
+                    sa = sum(sa_bits[i] << (7 - i) for i in range(8)) if len(sa_bits) == 8 else 0
+                    
+                    t_ms = idx / sample_rate * 1000
                     results.append({
-                        "proto": "WS2812B",
+                        "proto": "Profibus",
                         "time_ms": f"{t_ms:.2f}",
-                        "info": f"BIT {bit_val} ({high_samples}/{low_samples})",
+                        "info": f"SD1 DA:0x{da:02X} SA:0x{sa:02X}",
                         "ack": "-",
                         "crc": "-",
                     })
-                    i = l
-                    continue
-        i += 1
-        
+                    
+    return results
+
+
+def decode_bluetooth(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """Bluetooth Classic: Access code + header + data packets."""
+    digital = _to_digital(samples, threshold)
+    edges = _find_edges(digital)
+    results: List[Dict] = []
+    n = len(digital)
+    
+    # Bluetooth access code: 72-bit pattern (0xAA repeated 8 times + flip)
+    # Look for Bluetooth preamble (10101010 pattern)
+    for i, (idx, kind) in enumerate(edges):
+        if kind != "rising":
+            continue
+            
+        if i + 20 < len(edges):
+            # Check for alternating pattern (Bluetooth preamble)
+            alternating = True
+            for j in range(min(16, len(edges) - i)):
+                expected_kind = "rising" if j % 2 == 0 else "falling"
+                if edges[i + j][1] != expected_kind:
+                    alternating = False
+                    break
+                    
+            if alternating:
+                t_ms = idx / sample_rate * 1000
+                results.append({
+                    "proto": "Bluetooth",
+                    "time_ms": f"{t_ms:.2f}",
+                    "info": f"PREAMBLE detected",
+                    "ack": "-",
+                    "crc": "-",
+                })
+                
+    return results
+
+
+def decode_usb(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """USB 1.1/2.0: Differential NRZI with SYNC pattern."""
+    digital = _to_digital(samples, threshold)
+    edges = _find_edges(digital)
+    results: List[Dict] = []
+    n = len(digital)
+    
+    # USB SYNC pattern: KJKJKJKK (7 bits)
+    # Look for USB sync and packet patterns
+    for i, (idx, kind) in enumerate(edges):
+        if i + 14 < len(edges):
+            # Check for SYNC pattern (alternating with double at end)
+            sync_ok = True
+            for j in range(6):
+                expected_kind = "rising" if j % 2 == 0 else "falling"
+                if edges[i + j][1] != expected_kind:
+                    sync_ok = False
+                    break
+                    
+            # Check for double bit at end (two same transitions)
+            if sync_ok and i + 7 < len(edges):
+                if edges[i + 5][1] == edges[i + 6][1]:  # Double bit
+                    t_ms = idx / sample_rate * 1000
+                    results.append({
+                        "proto": "USB",
+                        "time_ms": f"{t_ms:.2f}",
+                        "info": f"SYNC pattern",
+                        "ack": "-",
+                        "crc": "-",
+                    })
+                    
+    return results
+
+
+def decode_ethernet(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """Ethernet 10/100BASE-T: Preamble + SFD + MAC addresses."""
+    digital = _to_digital(samples, threshold)
+    edges = _find_edges(digital)
+    results: List[Dict] = []
+    n = len(digital)
+    
+    # Ethernet preamble: 7 bytes of 0x55 (alternating 10101010)
+    # SFD: 0xD4 (10110101)
+    for i, (idx, kind) in enumerate(edges):
+        if kind != "rising":
+            continue
+            
+        # Look for 62 bits of alternating pattern (7 bytes * 8 bits)
+        if i + 62 < len(edges):
+            preamble_ok = True
+            for j in range(62):
+                expected_kind = "rising" if j % 2 == 0 else "falling"
+                if edges[i + j][1] != expected_kind:
+                    preamble_ok = False
+                    break
+                    
+            if preamble_ok and i + 70 < len(edges):
+                # Check SFD pattern (10110101)
+                sfd_pattern = ["rising", "falling", "rising", "rising", "falling", "rising", "falling", "rising"]
+                sfd_ok = all(edges[i + 62 + j][1] == sfd_pattern[j] for j in range(8))
+                
+                if sfd_ok:
+                    t_ms = idx / sample_rate * 1000
+                    results.append({
+                        "proto": "Ethernet",
+                        "time_ms": f"{t_ms:.2f}",
+                        "info": f"PREAMBLE+SFD",
+                        "ack": "-",
+                        "crc": "-",
+                    })
+                    
+    return results
+
+
+def decode_midi(samples: np.ndarray, threshold: float, sample_rate: float) -> List[Dict]:
+    """MIDI protocol: 31.25kbaud async serial with start/stop bits."""
+    digital = _to_digital(samples, threshold)
+    edges = _find_edges(digital)
+    results: List[Dict] = []
+    n = len(digital)
+    
+    # MIDI timing: 31.25 kbaud = 32µs per bit
+    bit_samples = int(0.000032 * sample_rate) if sample_rate > 0 else 32
+    
+    for i, (idx, kind) in enumerate(edges):
+        if kind != "falling":  # Start bit
+            continue
+            
+        if i + 10 < len(edges):
+            # Check for consistent MIDI timing
+            timing_ok = True
+            for j in range(9):
+                if i + j + 1 >= len(edges):
+                    timing_ok = False
+                    break
+                interval = abs(edges[i + j + 1][0] - edges[i + j][0] - bit_samples)
+                if interval > bit_samples // 2:
+                    timing_ok = False
+                    break
+                    
+            if timing_ok:
+                # Extract 8 data bits
+                bits = []
+                for bit_idx in range(8):
+                    sample_pos = idx + (1 + bit_idx) * bit_samples // 2
+                    if sample_pos < n:
+                        bits.append(int(digital[sample_pos]))
+                    else:
+                        bits.append(0)
+                        
+                if len(bits) == 8:
+                    byte_val = sum(bits[i] << (7 - i) for i in range(8))
+                    # MIDI message types
+                    if byte_val >= 0x80:
+                        msg_type = (byte_val >> 4) & 0x0F
+                        channel = byte_val & 0x0F
+                        msg_names = ["Note Off", "Note On", "Poly Pressure", "Control Change", 
+                                    "Program Change", "Channel Pressure", "Pitch Bend", "System"]
+                        msg_name = msg_names[msg_type] if msg_type < 8 else f"Type{msg_type}"
+                        t_ms = idx / sample_rate * 1000
+                        results.append({
+                            "proto": "MIDI",
+                            "time_ms": f"{t_ms:.2f}",
+                            "info": f"{msg_name} CH{channel+1}",
+                            "ack": "-",
+                            "crc": "-",
+                        })
+                        
     return results
 
 
 PROTOCOL_NAMES = ("I2C", "SPI", "UART", "1-Wire", "CAN", "LIN", "PWM", "Manchester", "NRZ", 
-                 "DHT", "DMX512", "NEC IR", "RC5 IR", "WS2812B")
+                 "Modbus", "Profibus", "Bluetooth", "USB", "Ethernet", "MIDI")
 
 
 # 
@@ -1054,16 +1123,18 @@ class ProtocolDecoderTab(QWidget):
             results = decode_manchester(samples, threshold, sample_rate)
         elif proto == "NRZ":
             results = decode_nrz(samples, threshold, sample_rate)
-        elif proto == "DHT":
-            results = decode_dht(samples, threshold, sample_rate)
-        elif proto == "DMX512":
-            results = decode_dmx512(samples, threshold, sample_rate)
-        elif proto == "NEC IR":
-            results = decode_nec_ir(samples, threshold, sample_rate)
-        elif proto == "RC5 IR":
-            results = decode_rc5_ir(samples, threshold, sample_rate)
-        elif proto == "WS2812B":
-            results = decode_ws2812b(samples, threshold, sample_rate)
+        elif proto == "Modbus":
+            results = decode_modbus(samples, threshold, sample_rate)
+        elif proto == "Profibus":
+            results = decode_profibus(samples, threshold, sample_rate)
+        elif proto == "Bluetooth":
+            results = decode_bluetooth(samples, threshold, sample_rate)
+        elif proto == "USB":
+            results = decode_usb(samples, threshold, sample_rate)
+        elif proto == "Ethernet":
+            results = decode_ethernet(samples, threshold, sample_rate)
+        elif proto == "MIDI":
+            results = decode_midi(samples, threshold, sample_rate)
         else:
             results = []
 
@@ -1074,9 +1145,10 @@ class ProtocolDecoderTab(QWidget):
             "UART": T.ACCENT_AMBER, "1-Wire": T.ACCENT_PUR,
             "CAN": T.ACCENT_CYAN, "LIN": T.ACCENT_RED,
             "PWM": T.PRIMARY, "Manchester": T.ACCENT_BLUE,
-            "NRZ": T.TEXT_MUTED, "DHT": T.ACCENT_AMBER,
-            "DMX512": T.ACCENT_CYAN, "NEC IR": T.ACCENT_RED,
-            "RC5 IR": T.ACCENT_PUR, "WS2812B": T.PRIMARY
+            "NRZ": T.TEXT_MUTED, "Modbus": T.ACCENT_AMBER,
+            "Profibus": T.ACCENT_CYAN, "Bluetooth": T.ACCENT_RED,
+            "USB": T.ACCENT_PUR, "Ethernet": T.PRIMARY,
+            "MIDI": T.ACCENT_BLUE
         }
         col = colors.get(proto, T.TEXT)
 
