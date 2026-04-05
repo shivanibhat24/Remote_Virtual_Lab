@@ -3,1436 +3,1039 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STM32 Remote Laboratory v6.0 - Professional Interface</title>
+    <title>STM32 Remote Laboratory - Academic Interface</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        /* Professional CSS with clean design */
+        /* Academic Professional CSS */
         :root {
-            /* Dark Theme (Default) */
-            --DARK_BG: #080c10;
-            --PANEL_BG: #0d1219;
-            --CARD_BG: #111820;
-            --BORDER: #1e2d3d;
-            --BORDER_HI: #2a4060;
-            --PRIMARY: #00ff88;
-            --ACCENT_BLUE: #00b4ff;
-            --ACCENT_AMBER: #ffaa00;
-            --ACCENT_RED: #ff3355;
-            --ACCENT_PUR: #aa55ff;
-            --ACCENT_CYAN: #00e5ff;
-            --TEXT: #c8dae8;
-            --TEXT_MUTED: #4a6080;
-            --TEXT_DIM: #2a3a4a;
-            --FONT_UI: 'Inter', 'Segoe UI', Roboto, sans-serif;
-            --FONT_MONO: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
-            
-            /* Gradients */
-            --GRADIENT_PRIMARY: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
-            --GRADIENT_BLUE: linear-gradient(135deg, #00b4ff 0%, #0080cc 100%);
-            --GRADIENT_AMBER: linear-gradient(135deg, #ffaa00 0%, #ff8800 100%);
-            --GRADIENT_RED: linear-gradient(135deg, #ff3355 0%, #cc0022 100%);
-            --GRADIENT_PUR: linear-gradient(135deg, #aa55ff 0%, #8833cc 100%);
-            --GRADIENT_CYAN: linear-gradient(135deg, #00e5ff 0%, #00b3cc 100%);
-            
-            /* Glow effects */
-            --GLOW_PRIMARY: 0 0 20px rgba(0, 255, 136, 0.5);
-            --GLOW_BLUE: 0 0 20px rgba(0, 180, 255, 0.5);
-            --GLOW_AMBER: 0 0 20px rgba(255, 170, 0, 0.5);
-            --GLOW_RED: 0 0 20px rgba(255, 51, 85, 0.5);
-            --GLOW_PUR: 0 0 20px rgba(170, 85, 255, 0.5);
-            --GLOW_CYAN: 0 0 20px rgba(0, 229, 255, 0.5);
+            /* Professional Academic Theme */
+            --BG_PRIMARY: #ffffff;
+            --BG_SECONDARY: #f8f9fa;
+            --BG_TERTIARY: #e9ecef;
+            --BORDER_COLOR: #dee2e6;
+            --BORDER_LIGHT: #f1f3f4;
+            --TEXT_PRIMARY: #212529;
+            --TEXT_SECONDARY: #6c757d;
+            --TEXT_MUTED: #adb5bd;
+            --PRIMARY_COLOR: #0066cc;
+            --SECONDARY_COLOR: #28a745;
+            --DANGER_COLOR: #dc3545;
+            --WARNING_COLOR: #ffc107;
+            --INFO_COLOR: #17a2b8;
+            --FONT_FAMILY: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --FONT_MONO: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
         }
 
-        /* Cyberpunk Theme */
-        [data-theme="cyberpunk"] {
-            --DARK_BG: #08010f;
-            --PANEL_BG: #0f0520;
-            --CARD_BG: #160830;
-            --BORDER: #2a0f4a;
-            --BORDER_HI: #5010a0;
-            --PRIMARY: #00ffcc;
-            --ACCENT_BLUE: #ff00ff;
-            --ACCENT_AMBER: #ffee00;
-            --ACCENT_RED: #ff0055;
-            --ACCENT_PUR: #cc44ff;
-            --ACCENT_CYAN: #00eeff;
-            --TEXT: #e0c8ff;
-            --TEXT_MUTED: #5a3a7a;
-            --TEXT_DIM: #2a1a3a;
-        }
-
-        /* Matrix Theme */
-        [data-theme="matrix"] {
-            --DARK_BG: #000000;
-            --PANEL_BG: #0a0f0a;
-            --CARD_BG: #0d1a0d;
-            --BORDER: #00ff00;
-            --BORDER_HI: #00cc00;
-            --PRIMARY: #00ff00;
-            --ACCENT_BLUE: #00ff88;
-            --ACCENT_AMBER: #88ff00;
-            --ACCENT_RED: #ff0000;
-            --ACCENT_PUR: #ff00ff;
-            --ACCENT_CYAN: #00ffff;
-            --TEXT: #00ff00;
-            --TEXT_MUTED: #00cc00;
-            --TEXT_DIM: #008800;
-        }
-
-        /* Neon Theme */
-        [data-theme="neon"] {
-            --DARK_BG: #0a0014;
-            --PANEL_BG: #1a0028;
-            --CARD_BG: #2a0038;
-            --BORDER: #ff00ff;
-            --BORDER_HI: #ff66ff;
-            --PRIMARY: #ff00ff;
-            --ACCENT_BLUE: #00ffff;
-            --ACCENT_AMBER: #ffff00;
-            --ACCENT_RED: #ff0066;
-            --ACCENT_PUR: #ff00ff;
-            --ACCENT_CYAN: #00ffff;
-            --TEXT: #ffffff;
-            --TEXT_MUTED: #ff66ff;
-            --TEXT_DIM: #9933cc;
+        /* Dark Mode for Academic Use */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --BG_PRIMARY: #1a1a1a;
+                --BG_SECONDARY: #2d2d2d;
+                --BG_TERTIARY: #3a3a3a;
+                --BORDER_COLOR: #4a4a4a;
+                --BORDER_LIGHT: #5a5a5a;
+                --TEXT_PRIMARY: #e0e0e0;
+                --TEXT_SECONDARY: #b0b0b0;
+                --TEXT_MUTED: #808080;
+                --PRIMARY_COLOR: #4d94ff;
+                --SECONDARY_COLOR: #28a745;
+                --DANGER_COLOR: #ff6b6b;
+                --WARNING_COLOR: #ffd93d;
+                --INFO_COLOR: #74c0fc;
+            }
         }
 
         /* Base Styles */
         * {
-            outline: none;
-            font-family: var(--FONT_UI);
-            font-size: 13px;
-            color: var(--TEXT);
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
         }
 
         body {
-            background: var(--DARK_BG);
-            color: var(--TEXT);
-            margin: 0;
-            padding: 0;
-            font-family: var(--FONT_UI);
+            font-family: var(--FONT_FAMILY);
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--TEXT_PRIMARY);
+            background-color: var(--BG_PRIMARY);
             overflow-x: hidden;
-            position: relative;
-        }
-
-        /* Main Window */
-        .main-window {
-            background: rgba(var(--DARK_BG), 0.95);
-            backdrop-filter: blur(10px);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            z-index: 1;
         }
 
         /* Header */
         .header {
-            background: linear-gradient(135deg, var(--PANEL_BG) 0%, rgba(var(--CARD_BG), 0.8) 100%);
-            border-bottom: 2px solid var(--BORDER);
-            padding: 15px 25px;
+            background-color: var(--BG_SECONDARY);
+            border-bottom: 1px solid var(--BORDER_COLOR);
+            padding: 16px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: relative;
-            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
-        .app-title {
-            font-size: 20px;
-            font-weight: 800;
-            background: var(--GRADIENT_PRIMARY);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: var(--GLOW_PRIMARY);
-            position: relative;
-            z-index: 2;
+        .header-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
         }
 
         .header-controls {
             display: flex;
-            gap: 15px;
             align-items: center;
-            position: relative;
-            z-index: 2;
-        }
-
-        /* Status Bar */
-        .status-bar {
-            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
-            border-top: 2px solid var(--BORDER);
-            padding: 10px 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 11px;
-            color: var(--TEXT_MUTED);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .status-bar::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: var(--GRADIENT_PRIMARY);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
+            gap: 16px;
         }
 
         .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--TEXT_SECONDARY);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            background: var(--ACCENT_RED);
-            margin-right: 8px;
-            position: relative;
-            animation: pulseIndicator 2s infinite;
+            background-color: var(--DANGER_COLOR);
         }
 
-        .status-indicator.connected {
-            background: var(--PRIMARY);
-            box-shadow: var(--GLOW_PRIMARY);
+        .status-dot.connected {
+            background-color: var(--SECONDARY_COLOR);
         }
 
-        @keyframes pulseIndicator {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.8; }
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
         }
 
-        /* Tab System */
-        .tab-container {
-            flex: 1;
+        /* Connection Panel */
+        .connection-panel {
+            background-color: var(--BG_SECONDARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            padding: 32px;
+            text-align: center;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .connection-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--TEXT_PRIMARY);
+        }
+
+        .connection-description {
+            color: var(--TEXT_SECONDARY);
+            margin-bottom: 24px;
+        }
+
+        .connection-form {
             display: flex;
             flex-direction: column;
-            position: relative;
+            align-items: center;
+            gap: 16px;
         }
 
-        .tab-bar {
-            background: linear-gradient(135deg, var(--DARK_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
-            border-bottom: 2px solid var(--BORDER);
+        .form-group {
             display: flex;
-            padding: 0 25px;
-            position: relative;
-            overflow: hidden;
+            flex-direction: column;
+            gap: 8px;
         }
 
-        .tab {
-            background: transparent;
-            color: var(--TEXT_MUTED);
-            border: none;
-            padding: 12px 20px;
-            margin-right: 5px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            position: relative;
-            transition: all 0.3s ease;
+        .form-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--TEXT_SECONDARY);
+        }
+
+        .form-input {
+            padding: 10px 16px;
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: var(--FONT_MONO);
             text-transform: uppercase;
             letter-spacing: 1px;
-            overflow: hidden;
+            background-color: var(--BG_PRIMARY);
+            color: var(--TEXT_PRIMARY);
+            transition: border-color 0.2s ease;
         }
 
-        .tab:hover {
-            color: var(--TEXT);
-            transform: translateY(-2px);
+        .form-input:focus {
+            outline: none;
+            border-color: var(--PRIMARY_COLOR);
+            box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
         }
 
-        .tab.active {
-            background: var(--GRADIENT_PRIMARY);
-            color: var(--DARK_BG);
-            font-weight: 700;
-            box-shadow: var(--GLOW_PRIMARY);
-            transform: translateY(-2px);
-        }
-
-        .tab-content {
-            flex: 1;
-            background: rgba(var(--DARK_BG), 0.9);
-            padding: 25px;
-            overflow-y: auto;
-            display: none;
-            position: relative;
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.5s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Cards */
-        .card {
-            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
-            border: 1px solid var(--BORDER);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-        }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: var(--GRADIENT_PRIMARY);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-
-        .card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.2);
-            border-color: var(--PRIMARY);
-        }
-
-        .card-title {
-            font-size: 14px;
-            font-weight: 700;
-            background: var(--GRADIENT_BLUE);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 15px;
-            position: relative;
+        .button-group {
+            display: flex;
+            gap: 12px;
         }
 
         /* Buttons */
         .btn {
-            background: transparent;
-            color: var(--PRIMARY);
-            border: 2px solid var(--PRIMARY);
-            border-radius: 8px;
             padding: 10px 20px;
-            font-size: 12px;
-            font-weight: 600;
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
-            font-family: var(--FONT_UI);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: var(--PRIMARY);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: width 0.3s ease, height 0.3s ease;
-        }
-
-        .btn:hover::before {
-            width: 100%;
-            height: 100%;
+            transition: all 0.2s ease;
+            background-color: var(--BG_PRIMARY);
+            color: var(--TEXT_PRIMARY);
         }
 
         .btn:hover {
-            background: var(--PRIMARY);
-            color: var(--DARK_BG);
-            transform: translateY(-2px);
-            box-shadow: var(--GLOW_PRIMARY);
+            background-color: var(--BG_TERTIARY);
         }
 
-        .btn:active {
-            transform: translateY(0);
+        .btn-primary {
+            background-color: var(--PRIMARY_COLOR);
+            color: white;
+            border-color: var(--PRIMARY_COLOR);
         }
 
-        .btn-blue {
-            color: var(--ACCENT_BLUE);
-            border-color: var(--ACCENT_BLUE);
+        .btn-primary:hover {
+            background-color: #0052a3;
         }
 
-        .btn-blue:hover {
-            background: var(--ACCENT_BLUE);
-            color: var(--DARK_BG);
-            box-shadow: var(--GLOW_BLUE);
+        .btn-secondary {
+            background-color: var(--SECONDARY_COLOR);
+            color: white;
+            border-color: var(--SECONDARY_COLOR);
         }
 
-        .btn-red {
-            color: var(--ACCENT_RED);
-            border-color: var(--ACCENT_RED);
+        .btn-secondary:hover {
+            background-color: #218838;
         }
 
-        .btn-red:hover {
-            background: var(--ACCENT_RED);
-            color: var(--DARK_BG);
-            box-shadow: var(--GLOW_RED);
+        .btn-danger {
+            background-color: var(--DANGER_COLOR);
+            color: white;
+            border-color: var(--DANGER_COLOR);
         }
 
-        .btn-amber {
-            color: var(--ACCENT_AMBER);
-            border-color: var(--ACCENT_AMBER);
+        .btn-danger:hover {
+            background-color: #c82333;
         }
 
-        .btn-amber:hover {
-            background: var(--ACCENT_AMBER);
-            color: var(--DARK_BG);
-            box-shadow: var(--GLOW_AMBER);
-        }
-
-        .btn-purple {
-            color: var(--ACCENT_PUR);
-            border-color: var(--ACCENT_PUR);
-        }
-
-        .btn-purple:hover {
-            background: var(--ACCENT_PUR);
-            color: var(--DARK_BG);
-            box-shadow: var(--GLOW_PUR);
-        }
-
-        .btn-cyan {
-            color: var(--ACCENT_CYAN);
-            border-color: var(--ACCENT_CYAN);
-        }
-
-        .btn-cyan:hover {
-            background: var(--ACCENT_CYAN);
-            color: var(--DARK_BG);
-            box-shadow: var(--GLOW_CYAN);
-        }
-
-        /* Form Controls */
-        .input, .select {
-            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
-            color: var(--TEXT);
-            border: 2px solid var(--BORDER);
+        /* Tab System */
+        .tab-container {
+            background-color: var(--BG_PRIMARY);
+            border: 1px solid var(--BORDER_COLOR);
             border-radius: 8px;
-            padding: 10px 15px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .tab-header {
+            background-color: var(--BG_SECONDARY);
+            border-bottom: 1px solid var(--BORDER_COLOR);
+            display: flex;
+            overflow-x: auto;
+        }
+
+        .tab-button {
+            padding: 12px 24px;
+            border: none;
+            background: none;
             font-size: 14px;
-            min-height: 35px;
-            font-family: var(--FONT_UI);
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
+            font-weight: 500;
+            cursor: pointer;
+            color: var(--TEXT_SECONDARY);
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            white-space: nowrap;
         }
 
-        .input:focus, .select:focus {
-            border-color: var(--PRIMARY);
-            box-shadow: var(--GLOW_PRIMARY);
-            transform: translateY(-2px);
+        .tab-button:hover {
+            color: var(--TEXT_PRIMARY);
+            background-color: var(--BG_TERTIARY);
         }
 
-        /* Grid Layouts */
-        .grid-2 {
+        .tab-button.active {
+            color: var(--PRIMARY_COLOR);
+            border-bottom-color: var(--PRIMARY_COLOR);
+            background-color: var(--BG_PRIMARY);
+        }
+
+        .tab-content {
+            padding: 24px;
+            min-height: 500px;
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        /* Grid Layout */
+        .grid {
             display: grid;
+            gap: 24px;
+        }
+
+        .grid-2 {
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
         }
 
         .grid-3 {
-            display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 15px;
         }
 
         .grid-4 {
-            display: grid;
             grid-template-columns: 1fr 1fr 1fr 1fr;
-            gap: 15px;
         }
 
-        .grid-5 {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
+        /* Cards */
+        .card {
+            background-color: var(--BG_SECONDARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
-        .flex {
-            display: flex;
+        .card-header {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--TEXT_PRIMARY);
         }
 
-        .flex-col {
-            flex-direction: column;
+        /* Form Controls */
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: var(--BG_PRIMARY);
+            color: var(--TEXT_PRIMARY);
+            transition: border-color 0.2s ease;
         }
 
-        .gap-10 {
-            gap: 10px;
+        .form-control:focus {
+            outline: none;
+            border-color: var(--PRIMARY_COLOR);
+            box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
         }
 
-        .gap-15 {
-            gap: 15px;
-        }
-
-        .gap-20 {
-            gap: 20px;
-        }
-
-        .items-center {
-            align-items: center;
-        }
-
-        .justify-between {
-            justify-content: space-between;
-        }
-
-        .justify-center {
-            justify-content: center;
+        .form-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 8px center;
+            background-repeat: no-repeat;
+            background-size: 16px;
+            padding-right: 32px;
         }
 
         /* Charts */
         .chart-container {
-            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
-            border: 2px solid var(--BORDER);
-            border-radius: 12px;
+            background-color: var(--BG_SECONDARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
             padding: 20px;
-            margin-bottom: 20px;
-            height: 450px;
+            margin-bottom: 24px;
+            height: 400px;
             position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(10px);
         }
 
-        .chart-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: var(--GRADIENT_PRIMARY);
-            animation: chartGlow 2s infinite;
+        /* Statistics */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
         }
 
-        @keyframes chartGlow {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
+        .stat-card {
+            background-color: var(--BG_SECONDARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--TEXT_SECONDARY);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--TEXT_PRIMARY);
+            font-family: var(--FONT_MONO);
         }
 
         /* Protocol Grid */
         .protocol-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            margin-top: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            margin-top: 16px;
         }
 
-        .protocol-btn {
-            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
-            border: 2px solid var(--BORDER);
-            color: var(--TEXT_MUTED);
-            font-size: 11px;
-            padding: 8px;
-            border-radius: 8px;
+        .protocol-button {
+            padding: 8px 12px;
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
-            font-family: var(--FONT_UI);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            position: relative;
-            overflow: hidden;
+            background-color: var(--BG_PRIMARY);
+            color: var(--TEXT_SECONDARY);
+            transition: all 0.2s ease;
         }
 
-        .protocol-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: var(--PRIMARY);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: width 0.3s ease, height 0.3s ease;
+        .protocol-button:hover {
+            background-color: var(--BG_TERTIARY);
+            color: var(--TEXT_PRIMARY);
         }
 
-        .protocol-btn:hover::before {
-            width: 100%;
-            height: 100%;
-        }
-
-        .protocol-btn:hover {
-            background: var(--GRADIENT_PRIMARY);
-            color: var(--DARK_BG);
-            transform: translateY(-3px);
-            box-shadow: var(--GLOW_PRIMARY);
-            border-color: var(--PRIMARY);
-        }
-
-        .protocol-btn.active {
-            background: var(--GRADIENT_PRIMARY);
-            color: var(--DARK_BG);
-            border-color: var(--PRIMARY);
-            box-shadow: var(--GLOW_PRIMARY);
-            transform: translateY(-3px);
+        .protocol-button.active {
+            background-color: var(--PRIMARY_COLOR);
+            color: white;
+            border-color: var(--PRIMARY_COLOR);
         }
 
         /* Log Area */
         .log-area {
-            background: linear-gradient(135deg, var(--DARK_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
-            border: 2px solid var(--BORDER);
-            border-radius: 8px;
-            padding: 15px;
-            height: 180px;
+            background-color: var(--BG_PRIMARY);
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 4px;
+            padding: 16px;
+            height: 200px;
             overflow-y: auto;
             font-family: var(--FONT_MONO);
-            font-size: 11px;
-            color: var(--TEXT_MUTED);
-            backdrop-filter: blur(10px);
-            position: relative;
-        }
-
-        .log-area::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .log-area::-webkit-scrollbar-track {
-            background: var(--CARD_BG);
-        }
-
-        .log-area::-webkit-scrollbar-thumb {
-            background: var(--PRIMARY);
-            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.4;
         }
 
         .log-entry {
-            margin-bottom: 6px;
-            line-height: 1.4;
+            margin-bottom: 4px;
             padding: 4px 8px;
             border-radius: 4px;
-            transition: all 0.2s ease;
-        }
-
-        .log-entry:hover {
-            background: rgba(var(--PRIMARY), 0.1);
         }
 
         .log-entry.tx {
-            color: var(--ACCENT_BLUE);
-            border-left: 3px solid var(--ACCENT_BLUE);
+            color: var(--INFO_COLOR);
+            background-color: rgba(23, 162, 184, 0.1);
         }
 
         .log-entry.rx {
-            color: var(--PRIMARY);
-            border-left: 3px solid var(--PRIMARY);
+            color: var(--SECONDARY_COLOR);
+            background-color: rgba(40, 167, 69, 0.1);
         }
 
-        .log-entry.err {
-            color: var(--ACCENT_RED);
-            border-left: 3px solid var(--ACCENT_RED);
+        .log-entry.error {
+            color: var(--DANGER_COLOR);
+            background-color: rgba(220, 53, 69, 0.1);
         }
 
-        .log-entry.info {
-            color: var(--ACCENT_AMBER);
-            border-left: 3px solid var(--ACCENT_AMBER);
-        }
-
-        /* Notes Section */
-        .notes-area {
-            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
-            border: 2px solid var(--BORDER);
-            border-radius: 8px;
-            padding: 15px;
-            min-height: 150px;
-            font-family: var(--FONT_UI);
-            font-size: 13px;
-            color: var(--TEXT);
+        /* Textarea */
+        .textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 1px solid var(--BORDER_COLOR);
+            border-radius: 4px;
+            font-family: var(--FONT_FAMILY);
+            font-size: 14px;
             resize: vertical;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
+            background-color: var(--BG_PRIMARY);
+            color: var(--TEXT_PRIMARY);
         }
 
-        .notes-area:focus {
-            border-color: var(--PRIMARY);
-            box-shadow: var(--GLOW_PRIMARY);
-            transform: translateY(-2px);
+        .textarea:focus {
+            outline: none;
+            border-color: var(--PRIMARY_COLOR);
+            box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
         }
 
-        .notes-controls {
-            margin-top: 15px;
+        /* Status Bar */
+        .status-bar {
+            background-color: var(--BG_SECONDARY);
+            border-top: 1px solid var(--BORDER_COLOR);
+            padding: 12px 24px;
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        /* Statistics Display */
-        .stat-display {
-            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
-            border: 2px solid var(--BORDER);
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-        }
-
-        .stat-display::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: var(--GRADIENT_PRIMARY);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-
-        .stat-display:hover::before {
-            transform: scaleX(1);
-        }
-
-        .stat-display:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.2);
-        }
-
-        .stat-label {
-            font-size: 11px;
-            color: var(--TEXT_MUTED);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-
-        .stat-value {
-            font-size: 28px;
-            font-weight: 700;
-            font-family: var(--FONT_MONO);
-            background: var(--GRADIENT_PRIMARY);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: var(--GLOW_PRIMARY);
-            transition: all 0.3s ease;
-        }
-
-        .stat-value.accent {
-            background: var(--GRADIENT_BLUE);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: var(--GLOW_BLUE);
-        }
-
-        .stat-value.amber {
-            background: var(--GRADIENT_AMBER);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: var(--GLOW_AMBER);
-        }
-
-        /* Connection Panel */
-        .auth-panel {
-            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.9) 100%);
-            border: 2px solid var(--BORDER);
-            border-radius: 16px;
-            padding: 30px;
-            text-align: center;
-            max-width: 450px;
-            margin: 50px auto;
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(20px);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-
-        .auth-panel::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--GRADIENT_PRIMARY);
-            opacity: 0.1;
-            animation: rotateGradient 10s linear infinite;
-        }
-
-        @keyframes rotateGradient {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .auth-title {
-            font-size: 24px;
-            font-weight: 800;
-            background: var(--GRADIENT_PRIMARY);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 20px;
-            position: relative;
-            z-index: 2;
-        }
-
-        .auth-input {
-            width: 250px;
-            text-align: center;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            margin-bottom: 20px;
-            font-size: 16px;
-            font-weight: 600;
-            position: relative;
-            z-index: 2;
-        }
-
-        /* Theme Selector */
-        .theme-selector {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.9) 100%);
-            border: 2px solid var(--BORDER);
-            border-radius: 12px;
-            padding: 10px;
-            backdrop-filter: blur(10px);
-        }
-
-        .theme-select {
-            background: var(--CARD_BG);
-            border: 2px solid var(--BORDER);
-            color: var(--TEXT);
-            padding: 6px 12px;
+            justify-content: space-between;
+            align-items: center;
             font-size: 12px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            color: var(--TEXT_SECONDARY);
         }
 
-        .theme-select:hover {
-            border-color: var(--PRIMARY);
-            box-shadow: var(--GLOW_PRIMARY);
+        .status-left, .status-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-muted {
+            color: var(--TEXT_MUTED);
+        }
+
+        .mb-3 {
+            margin-bottom: 16px;
+        }
+
+        .mb-4 {
+            margin-bottom: 24px;
         }
 
         /* Responsive Design */
         @media (max-width: 768px) {
-            .grid-4 {
-                grid-template-columns: 1fr 1fr;
+            .container {
+                padding: 16px;
             }
-            
+
+            .grid-2, .grid-3, .grid-4 {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+
             .protocol-grid {
-                grid-template-columns: repeat(3, 1fr);
+                grid-template-columns: repeat(2, 1fr);
             }
-            
-            .header-controls {
+
+            .header {
                 flex-direction: column;
-                gap: 10px;
+                gap: 16px;
             }
-            
-            .app-title {
-                font-size: 16px;
+
+            .tab-button {
+                padding: 10px 16px;
+                font-size: 13px;
             }
-            
-            .tab {
-                padding: 8px 12px;
-                font-size: 10px;
-            }
-            
-            .stat-value {
-                font-size: 20px;
-            }
-        }
-
-        /* Utility Classes */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid var(--BORDER);
-            border-top: 3px solid var(--PRIMARY);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-
-        .glow {
-            box-shadow: var(--GLOW_PRIMARY);
-        }
-
-        .shake {
-            animation: shake 0.5s;
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
         }
     </style>
 </head>
-<body data-theme="dark">
-    <!-- Theme Selector -->
-    <div class="theme-selector">
-        <select class="theme-select" onchange="changeTheme(this.value)">
-            <option value="dark">Dark</option>
-            <option value="cyberpunk">Cyberpunk</option>
-            <option value="matrix">Matrix</option>
-            <option value="neon">Neon</option>
-        </select>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1 class="header-title">STM32 Remote Laboratory</h1>
+        <div class="header-controls">
+            <div class="status-indicator">
+                <span class="status-dot" id="status-dot"></span>
+                <span id="status-text">Disconnected</span>
+            </div>
+            <button class="btn btn-primary" id="connect-btn" onclick="showConnectionPanel()">Connect</button>
+        </div>
+    </header>
+
+    <!-- Connection Panel -->
+    <div class="container">
+        <div class="connection-panel hidden" id="connection-panel">
+            <h2 class="connection-title">Remote Connection</h2>
+            <p class="connection-description">Enter the 6-character session ID from the host application</p>
+            <div class="connection-form">
+                <div class="form-group">
+                    <label class="form-label" for="session-id">Session ID</label>
+                    <input type="text" class="form-input" id="session-id" placeholder="X9T4K2" maxlength="6">
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="connect()">Connect</button>
+                    <button class="btn btn-secondary" onclick="hideConnectionPanel()">Cancel</button>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="main-window">
-        <!-- Header -->
-        <div class="header">
-            <div class="app-title">STM32 Remote Laboratory v6.0</div>
-            <div class="header-controls">
-                <span id="connection-status">
-                    <span class="status-indicator" id="status-indicator"></span>
-                    <span id="status-text">Disconnected</span>
-                </span>
-                <button class="btn btn-blue" onclick="showAuthPanel()" id="connect-btn">Connect</button>
-            </div>
-        </div>
-
-        <!-- Connection Panel -->
-        <div class="auth-panel" id="auth-panel" style="display: none;">
-            <div class="auth-title">Remote Connection Portal</div>
-            <p style="color: var(--TEXT_MUTED); margin-bottom: 25px;">Enter 6-character Session ID from Host GUI</p>
-            <input type="text" class="input auth-input" id="session-id" placeholder="X9T4K2" maxlength="6">
-            <br>
-            <div class="flex gap-15 justify-center">
-                <button class="btn" onclick="connect_cloud()">Connect to Cloud</button>
-                <button class="btn btn-red" onclick="hideAuthPanel()">Cancel</button>
-            </div>
-        </div>
-
+    <!-- Main Interface -->
+    <div class="container" id="main-interface" style="display: none;">
         <!-- Tab Container -->
         <div class="tab-container">
-            <!-- Tab Bar -->
-            <div class="tab-bar">
-                <div class="tab active" onclick="switchTab('oscilloscope')">Oscilloscope</div>
-                <div class="tab" onclick="switchTab('multimeter')">Multimeter</div>
-                <div class="tab" onclick="switchTab('function-gen')">Function Gen</div>
-                <div class="tab" onclick="switchTab('protocol')">Protocol</div>
-                <div class="tab" onclick="switchTab('pid')">PID Control</div>
-                <div class="tab" onclick="switchTab('notes')">Notes</div>
-                <div class="tab" onclick="switchTab('advanced')">Advanced</div>
-                <div class="tab" onclick="switchTab('analytics')">Analytics</div>
+            <!-- Tab Header -->
+            <div class="tab-header">
+                <button class="tab-button active" onclick="switchTab('oscilloscope')">Oscilloscope</button>
+                <button class="tab-button" onclick="switchTab('multimeter')">Multimeter</button>
+                <button class="tab-button" onclick="switchTab('function')">Function Generator</button>
+                <button class="tab-button" onclick="switchTab('protocol')">Protocol</button>
+                <button class="tab-button" onclick="switchTab('pid')">PID Control</button>
+                <button class="tab-button" onclick="switchTab('notes')">Notes</button>
+                <button class="tab-button" onclick="switchTab('advanced')">Advanced</button>
+                <button class="tab-button" onclick="switchTab('analytics')">Analytics</button>
             </div>
 
-            <!-- Tab Contents -->
-            <div id="oscilloscope" class="tab-content active">
-                <div class="chart-container">
-                    <canvas id="dsoChart"></canvas>
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Oscilloscope Tab -->
+                <div class="tab-pane active" id="oscilloscope">
+                    <div class="chart-container">
+                        <canvas id="oscilloscope-chart"></canvas>
+                    </div>
+                    <div class="stat-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Mean Voltage</div>
+                            <div class="stat-value" id="mean-voltage">0.000 V</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Peak-to-Peak</div>
+                            <div class="stat-value" id="peak-voltage">0.000 V</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Frequency</div>
+                            <div class="stat-value" id="frequency">0 Hz</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-header">Oscilloscope Controls</h3>
+                        <div class="grid grid-4">
+                            <button class="btn btn-secondary" onclick="sendCommand('#DSO:TRIG AUTO')">Auto Trigger</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#DSO:TRIG NORM')">Normal Trigger</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#DSO:TRIG SINGLE')">Single Trigger</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#DSO:TRIG FORCE')">Force Trigger</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#DSO:TIME 1ms')">1ms/div</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#DSO:TIME 10ms')">10ms/div</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#DSO:TIME 100ms')">100ms/div</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#DSO:TIME 1s')">1s/div</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="grid-3">
-                    <div class="stat-display">
-                        <div class="stat-label">Mean Voltage</div>
-                        <div class="stat-value" id="stat-mean">0.000 V</div>
-                    </div>
-                    <div class="stat-display">
-                        <div class="stat-label">Peak-to-Peak</div>
-                        <div class="stat-value accent" id="stat-vpp">0.000 V</div>
-                    </div>
-                    <div class="stat-display">
-                        <div class="stat-label">Frequency</div>
-                        <div class="stat-value amber" id="stat-freq">0 Hz</div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-title">Advanced Oscilloscope Controls</div>
-                    <div class="grid-4">
-                        <button class="btn btn-blue" onclick="sendCommand('#DSO:TRIG AUTO')">Auto Trigger</button>
-                        <button class="btn btn-purple" onclick="sendCommand('#DSO:TRIG NORM')">Normal Trigger</button>
-                        <button class="btn btn-amber" onclick="sendCommand('#DSO:TRIG SINGLE')">Single Trigger</button>
-                        <button class="btn btn-cyan" onclick="sendCommand('#DSO:TRIG FORCE')">Force Trigger</button>
-                        <button class="btn" onclick="sendCommand('#DSO:TIME 1ms')">1ms/div</button>
-                        <button class="btn" onclick="sendCommand('#DSO:TIME 10ms')">10ms/div</button>
-                        <button class="btn" onclick="sendCommand('#DSO:TIME 100ms')">100ms/div</button>
-                        <button class="btn" onclick="sendCommand('#DSO:TIME 1s')">1s/div</button>
-                    </div>
-                </div>
-            </div>
 
-            <div id="multimeter" class="tab-content">
-                <div class="grid-2">
-                    <div class="card">
-                        <div class="card-title">Measurement Mode</div>
-                        <div class="grid-2">
-                            <button class="btn" onclick="sendCommand('#MM:MODE V')">DC Voltage</button>
-                            <button class="btn" onclick="sendCommand('#MM:MODE A')">DC Current</button>
-                            <button class="btn" onclick="sendCommand('#MM:MODE R')">Resistance</button>
-                            <button class="btn" onclick="sendCommand('#MM:MODE F')">Frequency</button>
-                            <button class="btn btn-blue" onclick="sendCommand('#MM:MODE AC')">AC Voltage</button>
-                            <button class="btn btn-purple" onclick="sendCommand('#MM:MODE CAP')">Capacitance</button>
+                <!-- Multimeter Tab -->
+                <div class="tab-pane" id="multimeter">
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <h3 class="card-header">Measurement Mode</h3>
+                            <div class="grid grid-2">
+                                <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE V')">DC Voltage</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE A')">DC Current</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE R')">Resistance</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE F')">Frequency</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE AC')">AC Voltage</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE CAP')">Capacitance</button>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-header">Range Control</h3>
+                            <div class="grid grid-2">
+                                <button class="btn btn-secondary" onclick="sendCommand('#MM:RANGE AUTO')">Auto Range</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#MM:RANGE 5V')">5V Range</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#MM:RANGE 12V')">12V Range</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#MM:RANGE 24V')">24V Range</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#MM:RANGE 50V')">50V Range</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#MM:RANGE 100V')">100V Range</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mb-4">
+                        <h3 class="card-header">Current Reading</h3>
+                        <div class="stat-card">
+                            <div class="stat-value" id="multimeter-reading" style="font-size: 32px;">0.000 V</div>
                         </div>
                     </div>
                     <div class="card">
-                        <div class="card-title">Range Control</div>
-                        <div class="grid-2">
-                            <button class="btn" onclick="sendCommand('#MM:RANGE AUTO')">Auto Range</button>
-                            <button class="btn" onclick="sendCommand('#MM:RANGE 5V')">5V Range</button>
-                            <button class="btn" onclick="sendCommand('#MM:RANGE 12V')">12V Range</button>
-                            <button class="btn" onclick="sendCommand('#MM:RANGE 24V')">24V Range</button>
-                            <button class="btn btn-amber" onclick="sendCommand('#MM:RANGE 50V')">50V Range</button>
-                            <button class="btn btn-red" onclick="sendCommand('#MM:RANGE 100V')">100V Range</button>
+                        <h3 class="card-header">Measurement History</h3>
+                        <div class="log-area" id="multimeter-history">
+                            No measurements recorded yet...
                         </div>
                     </div>
                 </div>
-                <div class="card">
-                    <div class="card-title">Current Reading</div>
-                    <div class="stat-display">
-                        <div class="stat-value" id="mm-reading" style="font-size: 36px;">0.000 V</div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-title">Measurement History</div>
-                    <div id="mm-history" style="font-family: var(--FONT_MONO); font-size: 12px; color: var(--TEXT_MUTED); max-height: 150px; overflow-y: auto;">
-                        No measurements yet...
-                    </div>
-                </div>
-            </div>
 
-            <div id="function-gen" class="tab-content">
-                <div class="grid-2">
-                    <div class="card">
-                        <div class="card-title">Waveform Type</div>
-                        <div class="grid-3">
-                            <button class="btn btn-blue" onclick="sendCommand('#FG:WAVE:SQ')">Square</button>
-                            <button class="btn btn-purple" onclick="sendCommand('#FG:WAVE:SI')">Sine</button>
-                            <button class="btn btn-amber" onclick="sendCommand('#FG:WAVE:TR')">Triangle</button>
-                            <button class="btn btn-cyan" onclick="sendCommand('#FG:WAVE:SAW')">Sawtooth</button>
-                            <button class="btn" onclick="sendCommand('#FG:WAVE:NOISE')">Noise</button>
-                            <button class="btn" onclick="sendCommand('#FG:WAVE:DC')">DC</button>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-title">Frequency Control</div>
-                        <div class="grid-2">
-                            <button class="btn" onclick="sendCommand('#FG:FREQ 10')">10 Hz</button>
-                            <button class="btn" onclick="sendCommand('#FG:FREQ 100')">100 Hz</button>
-                            <button class="btn" onclick="sendCommand('#FG:FREQ 500')">500 Hz</button>
-                            <button class="btn" onclick="sendCommand('#FG:FREQ 1000')">1 kHz</button>
-                            <button class="btn btn-blue" onclick="sendCommand('#FG:FREQ 5000')">5 kHz</button>
-                            <button class="btn btn-purple" onclick="sendCommand('#FG:FREQ 10000')">10 kHz</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="grid-2">
-                    <div class="card">
-                        <div class="card-title">Amplitude & Offset</div>
-                        <div class="grid-2 gap-15">
-                            <div>
-                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Amplitude (V)</label>
-                                <input type="number" class="input" id="fg-amplitude" value="3.3" step="0.1" min="0" max="5">
-                            </div>
-                            <div>
-                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Offset (V)</label>
-                                <input type="number" class="input" id="fg-offset" value="0" step="0.1" min="-2.5" max="2.5">
+                <!-- Function Generator Tab -->
+                <div class="tab-pane" id="function">
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <h3 class="card-header">Waveform Type</h3>
+                            <div class="grid grid-3">
+                                <button class="btn btn-secondary" onclick="sendCommand('#FG:WAVE:SQ')">Square</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#FG:WAVE:SI')">Sine</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#FG:WAVE:TR')">Triangle</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#FG:WAVE:SAW')">Sawtooth</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#FG:WAVE:NOISE')">Noise</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#FG:WAVE:DC')">DC</button>
                             </div>
                         </div>
-                        <div class="flex gap-10" style="margin-top: 15px;">
-                            <button class="btn btn-amber" onclick="updateFGParams()">Update</button>
-                            <button class="btn btn-cyan" onclick="sendCommand('#FG:OUTPUT ON')">Output ON</button>
-                            <button class="btn btn-red" onclick="sendCommand('#FG:OUTPUT OFF')">Output OFF</button>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-title">Function Generator Status</div>
-                        <div class="grid-3">
-                            <div class="stat-display">
-                                <div class="stat-label">Waveform</div>
-                                <div class="stat-value" id="fg-wave" style="font-size: 18px;">Square</div>
-                            </div>
-                            <div class="stat-display">
-                                <div class="stat-label">Frequency</div>
-                                <div class="stat-value accent" id="fg-freq" style="font-size: 18px;">1000 Hz</div>
-                            </div>
-                            <div class="stat-display">
-                                <div class="stat-label">Amplitude</div>
-                                <div class="stat-value amber" id="fg-amp" style="font-size: 18px;">3.3V</div>
+                        <div class="card">
+                            <h3 class="card-header">Frequency Control</h3>
+                            <div class="grid grid-2">
+                                <button class="btn btn-secondary" onclick="sendCommand('#FG:FREQ 10')">10 Hz</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#FG:FREQ 100')">100 Hz</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#FG:FREQ 500')">500 Hz</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#FG:FREQ 1000')">1 kHz</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#FG:FREQ 5000')">5 kHz</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#FG:FREQ 10000')">10 kHz</button>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <div id="protocol" class="tab-content">
-                <div class="card">
-                    <div class="card-title">Protocol Selection (15 Protocols)</div>
-                    <div class="protocol-grid" id="protocol-grid">
-                        <!-- Protocol buttons will be added here -->
-                    </div>
-                    <div style="margin-top: 20px;">
-                        <div style="color: var(--TEXT_MUTED); font-size: 12px; margin-bottom: 10px;">Active Protocol:</div>
-                        <div id="active-protocol" style="color: var(--PRIMARY); font-weight: 600; font-size: 16px;">None</div>
-                    </div>
-                </div>
-                <div class="grid-2">
-                    <div class="card">
-                        <div class="card-title">Protocol Decoder Results</div>
-                        <div id="protocol-results" style="font-family: var(--FONT_MONO); font-size: 11px; color: var(--TEXT_MUTED); max-height: 300px; overflow-y: auto;">
-                            No protocol data received yet...
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-title">Protocol Statistics</div>
-                        <div class="grid-2">
-                            <div class="stat-display">
-                                <div class="stat-label">Packets Found</div>
-                                <div class="stat-value" id="proto-packets" style="font-size: 20px;">0</div>
-                            </div>
-                            <div class="stat-display">
-                                <div class="stat-label">Error Rate</div>
-                                <div class="stat-value accent" id="proto-errors" style="font-size: 20px;">0%</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="pid" class="tab-content">
-                <div class="grid-2">
-                    <div class="card">
-                        <div class="card-title">PID Parameters</div>
-                        <div class="grid-2 gap-15">
-                            <div>
-                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Kp (Proportional)</label>
-                                <input type="number" class="input" id="pid-kp" value="1.0" step="0.1">
-                            </div>
-                            <div>
-                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Ki (Integral)</label>
-                                <input type="number" class="input" id="pid-ki" value="0.1" step="0.01">
-                            </div>
-                            <div>
-                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Kd (Derivative)</label>
-                                <input type="number" class="input" id="pid-kd" value="0.05" step="0.01">
-                            </div>
-                            <div>
-                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Setpoint</label>
-                                <input type="number" class="input" id="pid-setpoint" value="2.5" step="0.1">
-                            </div>
-                        </div>
-                        <div class="flex gap-10" style="margin-top: 20px;">
-                            <button class="btn btn-purple" onclick="sendPIDParams()">Update PID</button>
-                            <button class="btn btn-amber" onclick="sendCommand('#PID:START')">Start</button>
-                            <button class="btn btn-red" onclick="sendCommand('#PID:STOP')">Stop</button>
-                            <button class="btn btn-blue" onclick="sendCommand('#PID:RESET')">Reset</button>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-title">PID Control Status</div>
-                        <div class="grid-2">
-                            <div class="stat-display">
-                                <div class="stat-label">Output</div>
-                                <div class="stat-value" id="pid-output" style="font-size: 24px;">0.000</div>
-                            </div>
-                            <div class="stat-display">
-                                <div class="stat-label">Error</div>
-                                <div class="stat-value accent" id="pid-error" style="font-size: 18px;">0.000</div>
-                            </div>
-                        </div>
-                        <div class="card" style="margin-top: 15px;">
-                            <div class="card-title">PID Performance</div>
-                            <div class="grid-3">
-                                <div class="stat-display">
-                                    <div class="stat-label">Rise Time</div>
-                                    <div class="stat-value amber" id="pid-rise" style="font-size: 16px;">0.0s</div>
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <h3 class="card-header">Amplitude & Offset</h3>
+                            <div class="grid grid-2">
+                                <div>
+                                    <label class="form-label">Amplitude (V)</label>
+                                    <input type="number" class="form-control" id="amplitude" value="3.3" step="0.1" min="0" max="5">
                                 </div>
-                                <div class="stat-display">
-                                    <div class="stat-label">Overshoot</div>
-                                    <div class="stat-value" id="pid-overshoot" style="font-size: 16px;">0%</div>
+                                <div>
+                                    <label class="form-label">Offset (V)</label>
+                                    <input type="number" class="form-control" id="offset" value="0" step="0.1" min="-2.5" max="2.5">
                                 </div>
-                                <div class="stat-display">
-                                    <div class="stat-label">Steady State</div>
-                                    <div class="stat-value" id="pid-steady" style="font-size: 16px;">0.0</div>
+                            </div>
+                            <div class="button-group mt-3">
+                                <button class="btn btn-primary" onclick="updateFunctionGenerator()">Update</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#FG:OUTPUT ON')">Output ON</button>
+                                <button class="btn btn-danger" onclick="sendCommand('#FG:OUTPUT OFF')">Output OFF</button>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-header">Generator Status</h3>
+                            <div class="stat-grid">
+                                <div class="stat-card">
+                                    <div class="stat-label">Waveform</div>
+                                    <div class="stat-value" id="waveform">Square</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Frequency</div>
+                                    <div class="stat-value" id="freq-status">1000 Hz</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Amplitude</div>
+                                    <div class="stat-value" id="amp-status">3.3V</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div id="notes" class="tab-content">
-                <div class="grid-2">
+                <!-- Protocol Tab -->
+                <div class="tab-pane" id="protocol">
                     <div class="card">
-                        <div class="card-title">Experiment Notes</div>
-                        <textarea class="notes-area" id="notes-area" placeholder="Enter your experiment notes here..."></textarea>
-                        <div class="notes-controls">
-                            <button class="btn" onclick="saveNotes()">Save</button>
-                            <button class="btn btn-blue" onclick="shareNotes()">Share</button>
-                            <button class="btn btn-amber" onclick="loadNotes()">Load</button>
-                            <button class="btn btn-purple" onclick="exportNotes()">Export</button>
-                            <button class="btn btn-red" onclick="clearNotes()">Clear</button>
+                        <h3 class="card-header">Protocol Selection</h3>
+                        <div class="protocol-grid" id="protocol-grid">
+                            <!-- Protocol buttons will be added here -->
+                        </div>
+                        <div class="mt-3">
+                            <strong>Active Protocol:</strong> <span id="active-protocol">None</span>
                         </div>
                     </div>
-                    <div class="card">
-                        <div class="card-title">Shared Notes</div>
-                        <div id="shared-notes" style="max-height: 300px; overflow-y: auto; font-family: var(--FONT_MONO); font-size: 12px; color: var(--TEXT_MUTED);">
-                            No shared notes available...
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <h3 class="card-header">Protocol Results</h3>
+                            <div class="log-area" id="protocol-results">
+                                No protocol data received yet...
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-header">Protocol Statistics</h3>
+                            <div class="stat-grid">
+                                <div class="stat-card">
+                                    <div class="stat-label">Packets Found</div>
+                                    <div class="stat-value" id="packet-count">0</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Error Rate</div>
+                                    <div class="stat-value" id="error-rate">0%</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div id="advanced" class="tab-content">
-                <div class="grid-2">
-                    <div class="card">
-                        <div class="card-title">System Configuration</div>
-                        <div class="grid-2 gap-15">
-                            <div>
-                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Sample Rate</label>
-                                <select class="select" id="sample-rate">
-                                    <option value="1000">1 kHz</option>
-                                    <option value="10000" selected>10 kHz</option>
-                                    <option value="100000">100 kHz</option>
-                                    <option value="1000000">1 MHz</option>
-                                </select>
+                <!-- PID Tab -->
+                <div class="tab-pane" id="pid">
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <h3 class="card-header">PID Parameters</h3>
+                            <div class="grid grid-2">
+                                <div>
+                                    <label class="form-label">Kp (Proportional)</label>
+                                    <input type="number" class="form-control" id="kp" value="1.0" step="0.1">
+                                </div>
+                                <div>
+                                    <label class="form-label">Ki (Integral)</label>
+                                    <input type="number" class="form-control" id="ki" value="0.1" step="0.01">
+                                </div>
+                                <div>
+                                    <label class="form-label">Kd (Derivative)</label>
+                                    <input type="number" class="form-control" id="kd" value="0.05" step="0.01">
+                                </div>
+                                <div>
+                                    <label class="form-label">Setpoint</label>
+                                    <input type="number" class="form-control" id="setpoint" value="2.5" step="0.1">
+                                </div>
                             </div>
-                            <div>
-                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Buffer Size</label>
-                                <select class="select" id="buffer-size">
-                                    <option value="256">256</option>
-                                    <option value="512" selected>512</option>
-                                    <option value="1024">1024</option>
-                                    <option value="2048">2048</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Trigger Level</label>
-                                <input type="number" class="input" id="trigger-level" value="2.5" step="0.1" min="0" max="5">
-                            </div>
-                            <div>
-                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Trigger Edge</label>
-                                <select class="select" id="trigger-edge">
-                                    <option value="rising">Rising</option>
-                                    <option value="falling">Falling</option>
-                                    <option value="both">Both</option>
-                                </select>
+                            <div class="button-group mt-3">
+                                <button class="btn btn-primary" onclick="updatePID()">Update PID</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#PID:START')">Start</button>
+                                <button class="btn btn-danger" onclick="sendCommand('#PID:STOP')">Stop</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#PID:RESET')">Reset</button>
                             </div>
                         </div>
-                        <div class="flex gap-10" style="margin-top: 20px;">
-                            <button class="btn btn-purple" onclick="updateSystemConfig()">Apply</button>
-                            <button class="btn btn-blue" onclick="sendCommand('#SYS:RESET')">Reset System</button>
-                            <button class="btn btn-amber" onclick="sendCommand('#SYS:CALIBRATE')">Calibrate</button>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-title">System Information</div>
-                        <div class="grid-2">
-                            <div class="stat-display">
-                                <div class="stat-label">CPU Usage</div>
-                                <div class="stat-value" id="cpu-usage" style="font-size: 20px;">0%</div>
+                        <div class="card">
+                            <h3 class="card-header">PID Status</h3>
+                            <div class="stat-grid">
+                                <div class="stat-card">
+                                    <div class="stat-label">Output</div>
+                                    <div class="stat-value" id="pid-output">0.000</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Error</div>
+                                    <div class="stat-value" id="pid-error">0.000</div>
+                                </div>
                             </div>
-                            <div class="stat-display">
-                                <div class="stat-label">Memory</div>
-                                <div class="stat-value accent" id="memory-usage" style="font-size: 20px;">0 MB</div>
-                            </div>
-                        </div>
-                        <div class="grid-2" style="margin-top: 15px;">
-                            <div class="stat-display">
-                                <div class="stat-label">Temperature</div>
-                                <div class="stat-value amber" id="temperature" style="font-size: 20px;">25°C</div>
-                            </div>
-                            <div class="stat-display">
-                                <div class="stat-label">Uptime</div>
-                                <div class="stat-value" id="uptime" style="font-size: 16px;">00:00:00</div>
+                            <div class="card mt-3">
+                                <h3 class="card-header">Performance Metrics</h3>
+                                <div class="stat-grid">
+                                    <div class="stat-card">
+                                        <div class="stat-label">Rise Time</div>
+                                        <div class="stat-value" id="rise-time">0.0s</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-label">Overshoot</div>
+                                        <div class="stat-value" id="overshoot">0%</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="card">
-                    <div class="card-title">Debug Console</div>
-                    <div class="log-area" id="debug-console">
-                        Debug console ready...
-                    </div>
-                    <div class="flex gap-10" style="margin-top: 10px;">
-                        <button class="btn btn-blue" onclick="clearDebugConsole()">Clear</button>
-                        <button class="btn btn-amber" onclick="exportDebugLog()">Export Log</button>
-                        <button class="btn btn-purple" onclick="toggleDebugMode()">Debug Mode</button>
-                    </div>
-                </div>
-            </div>
 
-            <div id="analytics" class="tab-content">
-                <div class="grid-2">
-                    <div class="card">
-                        <div class="card-title">Real-time Analytics</div>
-                        <div class="chart-container" style="height: 300px;">
-                            <canvas id="analyticsChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-title">Performance Metrics</div>
-                        <div class="grid-2">
-                            <div class="stat-display">
-                                <div class="stat-label">Data Rate</div>
-                                <div class="stat-value" id="data-rate" style="font-size: 18px;">0 kB/s</div>
-                            </div>
-                            <div class="stat-display">
-                                <div class="stat-label">Latency</div>
-                                <div class="stat-value accent" id="latency" style="font-size: 18px;">0 ms</div>
+                <!-- Notes Tab -->
+                <div class="tab-pane" id="notes">
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <h3 class="card-header">Experiment Notes</h3>
+                            <textarea class="textarea" id="notes-area" placeholder="Enter your experiment notes here..."></textarea>
+                            <div class="button-group mt-3">
+                                <button class="btn btn-primary" onclick="saveNotes()">Save</button>
+                                <button class="btn btn-secondary" onclick="shareNotes()">Share</button>
+                                <button class="btn btn-secondary" onclick="loadNotes()">Load</button>
+                                <button class="btn btn-secondary" onclick="exportNotes()">Export</button>
+                                <button class="btn btn-danger" onclick="clearNotes()">Clear</button>
                             </div>
                         </div>
-                        <div class="grid-2" style="margin-top: 15px;">
-                            <div class="stat-display">
-                                <div class="stat-label">Packet Loss</div>
-                                <div class="stat-value amber" id="packet-loss" style="font-size: 18px;">0%</div>
-                            </div>
-                            <div class="stat-display">
-                                <div class="stat-label">Signal Quality</div>
-                                <div class="stat-value" id="signal-quality" style="font-size: 18px;">100%</div>
+                        <div class="card">
+                            <h3 class="card-header">Shared Notes</h3>
+                            <div class="log-area" id="shared-notes">
+                                No shared notes available...
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="card">
-                    <div class="card-title">Session History</div>
-                    <div id="session-history" style="font-family: var(--FONT_MONO); font-size: 12px; color: var(--TEXT_MUTED); max-height: 200px; overflow-y: auto;">
-                        No session history available...
+
+                <!-- Advanced Tab -->
+                <div class="tab-pane" id="advanced">
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <h3 class="card-header">System Configuration</h3>
+                            <div class="grid grid-2">
+                                <div>
+                                    <label class="form-label">Sample Rate</label>
+                                    <select class="form-control form-select" id="sample-rate">
+                                        <option value="1000">1 kHz</option>
+                                        <option value="10000" selected>10 kHz</option>
+                                        <option value="100000">100 kHz</option>
+                                        <option value="1000000">1 MHz</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label">Buffer Size</label>
+                                    <select class="form-control form-select" id="buffer-size">
+                                        <option value="256">256</option>
+                                        <option value="512" selected>512</option>
+                                        <option value="1024">1024</option>
+                                        <option value="2048">2048</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label">Trigger Level</label>
+                                    <input type="number" class="form-control" id="trigger-level" value="2.5" step="0.1" min="0" max="5">
+                                </div>
+                                <div>
+                                    <label class="form-label">Trigger Edge</label>
+                                    <select class="form-control form-select" id="trigger-edge">
+                                        <option value="rising">Rising</option>
+                                        <option value="falling">Falling</option>
+                                        <option value="both">Both</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="button-group mt-3">
+                                <button class="btn btn-primary" onclick="updateSystemConfig()">Apply</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#SYS:RESET')">Reset</button>
+                                <button class="btn btn-secondary" onclick="sendCommand('#SYS:CALIBRATE')">Calibrate</button>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-header">System Information</h3>
+                            <div class="stat-grid">
+                                <div class="stat-card">
+                                    <div class="stat-label">CPU Usage</div>
+                                    <div class="stat-value" id="cpu-usage">0%</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Memory</div>
+                                    <div class="stat-value" id="memory-usage">0 MB</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Temperature</div>
+                                    <div class="stat-value" id="temperature">25°C</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Uptime</div>
+                                    <div class="stat-value" id="uptime">00:00:00</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-header">Debug Console</h3>
+                        <div class="log-area" id="debug-console">
+                            Debug console ready...
+                        </div>
+                        <div class="button-group mt-3">
+                            <button class="btn btn-secondary" onclick="clearDebugConsole()">Clear</button>
+                            <button class="btn btn-secondary" onclick="exportDebugLog()">Export Log</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics Tab -->
+                <div class="tab-pane" id="analytics">
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <h3 class="card-header">Performance Analytics</h3>
+                            <div class="chart-container" style="height: 300px;">
+                                <canvas id="analytics-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-header">Performance Metrics</h3>
+                            <div class="stat-grid">
+                                <div class="stat-card">
+                                    <div class="stat-label">Data Rate</div>
+                                    <div class="stat-value" id="data-rate">0 kB/s</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Latency</div>
+                                    <div class="stat-value" id="latency">0 ms</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Packet Loss</div>
+                                    <div class="stat-value" id="packet-loss">0%</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Signal Quality</div>
+                                    <div class="stat-value" id="signal-quality">100%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-header">Session History</h3>
+                        <div class="log-area" id="session-history">
+                            No session history available...
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Status Bar -->
-        <div class="status-bar">
-            <div>
-                <span id="session-info">No Session</span>
-                <span style="margin-left: 20px;">Signal: <span id="signal-strength">Strong</span></span>
-                <span style="margin-left: 20px;">Network: <span id="network-status">Online</span></span>
-            </div>
-            <div>
-                <span id="timestamp">--:--:--</span>
-                <span style="margin-left: 20px;">FPS: <span id="fps">60</span></span>
-            </div>
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div class="status-left">
+            <span id="session-info">No Session</span>
+            <span>Signal: <span id="signal-strength">Strong</span></span>
+            <span>Network: <span id="network-status">Online</span></span>
+        </div>
+        <div class="status-right">
+            <span id="timestamp">--:--:--</span>
         </div>
     </div>
 
     <script>
         // Global variables
         let client = null;
-        let base_topic = "";
+        let baseTopic = "";
         let currentTab = 'oscilloscope';
-        let dsoChart = null;
+        let oscilloscopeChart = null;
         let analyticsChart = null;
-        let debugMode = false;
         
         const protocols = ["I2C", "SPI", "UART", "1-Wire", "CAN", "LIN", "PWM", "Manchester", "NRZ", 
                          "Modbus", "Profibus", "Bluetooth", "USB", "Ethernet", "MIDI"];
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            initCharts();
-            initProtocolGrid();
+            initializeCharts();
+            initializeProtocolGrid();
             updateTimestamp();
             setInterval(updateTimestamp, 1000);
             loadLocalNotes();
         });
 
-        // Theme management
-        function changeTheme(theme) {
-            document.body.setAttribute('data-theme', theme);
-            localStorage.setItem('stm32-lab-theme', theme);
-        }
-
-        // Load saved theme
-        const savedTheme = localStorage.getItem('stm32-lab-theme') || 'dark';
-        document.body.setAttribute('data-theme', savedTheme);
-        document.querySelector('.theme-select').value = savedTheme;
-
-        // Tab management
-        function switchTab(tabName) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // Show selected tab
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-            currentTab = tabName;
-        }
-
         // Connection management
-        function showAuthPanel() {
-            document.getElementById('auth-panel').style.display = 'block';
+        function showConnectionPanel() {
+            document.getElementById('connection-panel').classList.remove('hidden');
         }
 
-        function hideAuthPanel() {
-            document.getElementById('auth-panel').style.display = 'none';
+        function hideConnectionPanel() {
+            document.getElementById('connection-panel').classList.add('hidden');
         }
 
-        function connect_cloud() {
-            const sid = document.getElementById("session-id").value.toUpperCase().trim();
-            if (sid.length !== 6) {
-                alert("Invalid Session ID. Must be 6 characters.");
+        function connect() {
+            const sessionId = document.getElementById('session-id').value.toUpperCase().trim();
+            if (sessionId.length !== 6) {
+                alert('Please enter a valid 6-character session ID.');
                 return;
             }
-            
-            base_topic = `stm32lab/${sid}`;
-            updateStatus("Connecting...", false);
-            addLogEntry(`Connecting to session: ${sid}`, 'info');
-            
-            // Connect to MQTT
-            client = mqtt.connect("wss://test.mosquitto.org:8081/mqtt");
 
-            client.on("connect", () => {
-                updateStatus(`Connected to [${sid}]`, true);
-                document.getElementById('session-info').textContent = `Session: ${sid}`;
-                hideAuthPanel();
+            baseTopic = `stm32lab/${sessionId}`;
+            updateStatus('Connecting...', false);
+            addLogEntry('Connecting to session: ' + sessionId, 'info');
+
+            // Connect to MQTT
+            client = mqtt.connect('wss://test.mosquitto.org:8081/mqtt');
+
+            client.on('connect', () => {
+                updateStatus(`Connected to [${sessionId}]`, true);
+                document.getElementById('session-info').textContent = `Session: ${sessionId}`;
+                hideConnectionPanel();
+                document.getElementById('main-interface').style.display = 'block';
                 document.getElementById('connect-btn').textContent = 'Disconnect';
-                document.getElementById('connect-btn').onclick = disconnect_cloud;
-                addLogEntry(`Successfully connected to STM32 Lab v6.0`, 'rx');
-                
+                document.getElementById('connect-btn').onclick = disconnect;
+                addLogEntry('Successfully connected to STM32 Lab', 'success');
+
                 // Subscribe to topics
-                client.subscribe(`${base_topic}/data`);
-                client.subscribe(`${base_topic}/logs`);
-                client.subscribe(`${base_topic}/notes`);
-                client.subscribe(`${base_topic}/protocol`);
-                client.subscribe(`${base_topic}/system`);
+                client.subscribe(`${baseTopic}/data`);
+                client.subscribe(`${baseTopic}/logs`);
+                client.subscribe(`${baseTopic}/notes`);
+                client.subscribe(`${baseTopic}/protocol`);
+                client.subscribe(`${baseTopic}/system`);
             });
 
-            client.on("message", (topic, message) => {
+            client.on('message', (topic, message) => {
                 try {
                     const payload = JSON.parse(message.toString());
                     
                     if (topic.includes('/logs')) {
-                        addLogEntry(payload.message || message.toString(), payload.type || 'rx');
+                        addLogEntry(payload.message || message.toString(), payload.type || 'info');
                     } else if (topic.includes('/notes')) {
                         handleSharedNotes(payload);
                     } else if (topic.includes('/protocol')) {
@@ -1442,97 +1045,113 @@
                     } else {
                         // Handle oscilloscope data
                         if (payload.s && payload.s.length > 0) {
-                            dsoChart.data.datasets[0].data = payload.s;
-                            dsoChart.update();
+                            oscilloscopeChart.data.datasets[0].data = payload.s;
+                            oscilloscopeChart.update();
                         }
                         
                         // Update statistics
                         if (payload.st) {
                             if (payload.st.mean !== undefined) {
-                                document.getElementById("stat-mean").textContent = payload.st.mean.toFixed(3) + " V";
+                                document.getElementById('mean-voltage').textContent = payload.st.mean.toFixed(3) + ' V';
                             }
                             if (payload.st.vpp !== undefined) {
-                                document.getElementById("stat-vpp").textContent = payload.st.vpp.toFixed(3) + " V";
+                                document.getElementById('peak-voltage').textContent = payload.st.vpp.toFixed(3) + ' V';
                             }
                             if (payload.st.dom_freq !== undefined) {
-                                document.getElementById("stat-freq").textContent = payload.st.dom_freq.toFixed(1) + " Hz";
+                                document.getElementById('frequency').textContent = payload.st.dom_freq.toFixed(1) + ' Hz';
                             }
                         }
                         
                         // Update instrument readings
                         if (payload.mm) {
-                            document.getElementById("mm-reading").textContent = payload.mm.toFixed(3) + " V";
-                            updateMMHistory(payload.mm);
+                            document.getElementById('multimeter-reading').textContent = payload.mm.toFixed(3) + ' V';
+                            updateMultimeterHistory(payload.mm);
                         }
                         if (payload.fg) {
-                            if (payload.fg.wave) document.getElementById("fg-wave").textContent = payload.fg.wave;
-                            if (payload.fg.freq) document.getElementById("fg-freq").textContent = payload.fg.freq + " Hz";
-                            if (payload.fg.amp) document.getElementById("fg-amp").textContent = payload.fg.amp + "V";
+                            if (payload.fg.wave) document.getElementById('waveform').textContent = payload.fg.wave;
+                            if (payload.fg.freq) document.getElementById('freq-status').textContent = payload.fg.freq + ' Hz';
+                            if (payload.fg.amp) document.getElementById('amp-status').textContent = payload.fg.amp + 'V';
                         }
                         if (payload.pid) {
                             if (payload.pid.output !== undefined) {
-                                document.getElementById("pid-output").textContent = payload.pid.output.toFixed(3);
+                                document.getElementById('pid-output').textContent = payload.pid.output.toFixed(3);
                             }
                             if (payload.pid.error !== undefined) {
-                                document.getElementById("pid-error").textContent = payload.pid.error.toFixed(3);
+                                document.getElementById('pid-error').textContent = payload.pid.error.toFixed(3);
                             }
                         }
                     }
                 } catch (e) {
-                    console.error("Parse error", e);
-                    addLogEntry(`Parse error: ${e.message}`, 'err');
+                    console.error('Parse error:', e);
+                    addLogEntry('Parse error: ' + e.message, 'error');
                 }
             });
 
-            client.on("error", (err) => {
-                updateStatus("Connection Error!", false);
-                addLogEntry(`Connection error: ${err.message}`, 'err');
+            client.on('error', (err) => {
+                updateStatus('Connection Error', false);
+                addLogEntry('Connection error: ' + err.message, 'error');
             });
 
-            client.on("close", () => {
-                updateStatus("Disconnected", false);
-                addLogEntry("Disconnected from cloud relay", 'err');
+            client.on('close', () => {
+                updateStatus('Disconnected', false);
+                addLogEntry('Disconnected from cloud relay', 'error');
             });
         }
 
-        function disconnect_cloud() {
+        function disconnect() {
             if (client) {
                 client.end();
                 client = null;
             }
-            updateStatus("Disconnected", false);
+            updateStatus('Disconnected', false);
             document.getElementById('session-info').textContent = 'No Session';
+            document.getElementById('main-interface').style.display = 'none';
             document.getElementById('connect-btn').textContent = 'Connect';
-            document.getElementById('connect-btn').onclick = showAuthPanel;
-            addLogEntry("Manually disconnected", 'info');
+            document.getElementById('connect-btn').onclick = showConnectionPanel;
+            addLogEntry('Manually disconnected', 'info');
         }
 
-        function updateStatus(msg, connected = false) {
-            document.getElementById("status-text").textContent = msg;
-            const indicator = document.getElementById("status-indicator");
+        function updateStatus(message, connected) {
+            document.getElementById('status-text').textContent = message;
+            const statusDot = document.getElementById('status-dot');
             if (connected) {
-                indicator.classList.add("connected");
+                statusDot.classList.add('connected');
             } else {
-                indicator.classList.remove("connected");
+                statusDot.classList.remove('connected');
             }
         }
 
+        // Tab management
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-pane').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            currentTab = tabName;
+        }
+
         // Chart initialization
-        function initCharts() {
-            // DSO Chart
-            const ctx = document.getElementById('dsoChart').getContext('2d');
-            dsoChart = new Chart(ctx, {
+        function initializeCharts() {
+            // Oscilloscope chart
+            const oscCtx = document.getElementById('oscilloscope-chart').getContext('2d');
+            oscilloscopeChart = new Chart(oscCtx, {
                 type: 'line',
                 data: {
                     labels: Array(500).fill(''),
                     datasets: [{
                         label: 'Voltage (V)',
                         data: Array(500).fill(0),
-                        borderColor: 'var(--PRIMARY)',
+                        borderColor: '#0066cc',
                         borderWidth: 2,
                         pointRadius: 0,
-                        fill: true,
-                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                        fill: false,
                         tension: 0.1
                     }]
                 },
@@ -1543,8 +1162,8 @@
                     scales: {
                         x: { display: false },
                         y: { 
-                            grid: { color: 'var(--BORDER)' }, 
-                            ticks: { color: 'var(--TEXT_MUTED)' }, 
+                            grid: { color: '#e9ecef' }, 
+                            ticks: { color: '#6c757d' }, 
                             suggestedMin: 0, 
                             suggestedMax: 5 
                         }
@@ -1555,8 +1174,8 @@
                 }
             });
 
-            // Analytics Chart
-            const analyticsCtx = document.getElementById('analyticsChart').getContext('2d');
+            // Analytics chart
+            const analyticsCtx = document.getElementById('analytics-chart').getContext('2d');
             analyticsChart = new Chart(analyticsCtx, {
                 type: 'line',
                 data: {
@@ -1564,7 +1183,7 @@
                     datasets: [{
                         label: 'Data Rate',
                         data: Array(50).fill(0),
-                        borderColor: 'var(--ACCENT_BLUE)',
+                        borderColor: '#17a2b8',
                         borderWidth: 2,
                         pointRadius: 0,
                         fill: false,
@@ -1574,12 +1193,12 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    animation: {duration: 750},
+                    animation: { duration: 750 },
                     scales: {
                         x: { display: false },
                         y: { 
-                            grid: { color: 'var(--BORDER)' }, 
-                            ticks: { color: 'var(--TEXT_MUTED)' }, 
+                            grid: { color: '#e9ecef' }, 
+                            ticks: { color: '#6c757d' }, 
                             suggestedMin: 0
                         }
                     },
@@ -1591,114 +1210,70 @@
         }
 
         // Protocol grid initialization
-        function initProtocolGrid() {
+        function initializeProtocolGrid() {
             const grid = document.getElementById('protocol-grid');
-            protocols.forEach((proto, index) => {
-                const btn = document.createElement('button');
-                btn.className = 'protocol-btn';
-                btn.textContent = proto;
-                btn.onclick = () => selectProtocol(proto);
-                grid.appendChild(btn);
+            protocols.forEach(protocol => {
+                const button = document.createElement('button');
+                button.className = 'protocol-button';
+                button.textContent = protocol;
+                button.onclick = () => selectProtocol(protocol);
+                grid.appendChild(button);
             });
         }
 
-        function selectProtocol(proto) {
-            document.getElementById('active-protocol').textContent = proto;
+        function selectProtocol(protocol) {
+            document.getElementById('active-protocol').textContent = protocol;
             
             // Update button states
-            document.querySelectorAll('.protocol-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.textContent === proto) {
-                    btn.classList.add('active');
+            document.querySelectorAll('.protocol-button').forEach(button => {
+                button.classList.remove('active');
+                if (button.textContent === protocol) {
+                    button.classList.add('active');
                 }
             });
             
-            addLogEntry(`Protocol selected: ${proto}`, 'info');
-            sendCommand(`#PROTO:SELECT ${proto}`);
-        }
-
-        function handleProtocolData(data) {
-            const resultsDiv = document.getElementById('protocol-results');
-            if (data.results && data.results.length > 0) {
-                let html = '<table style="width: 100%; border-collapse: collapse;">';
-                html += '<tr style="border-bottom: 2px solid var(--BORDER);"><th style="padding: 8px; text-align: left; color: var(--PRIMARY);">Time</th><th style="padding: 8px; text-align: left; color: var(--PRIMARY);">Protocol</th><th style="padding: 8px; text-align: left; color: var(--PRIMARY);">Info</th></tr>';
-                data.results.forEach((result, index) => {
-                    html += `<tr style="border-bottom: 1px solid var(--BORDER);">
-                        <td style="padding: 8px;">${result.time_ms}</td>
-                        <td style="padding: 8px; color: var(--PRIMARY); font-weight: 600;">${result.proto}</td>
-                        <td style="padding: 8px;">${result.info}</td>
-                    </tr>`;
-                });
-                html += '</table>';
-                resultsDiv.innerHTML = html;
-                
-                // Update statistics
-                document.getElementById('proto-packets').textContent = data.results.length;
-                document.getElementById('proto-errors').textContent = '0%';
-            } else {
-                resultsDiv.innerHTML = 'No protocol data decoded yet...';
-            }
-        }
-
-        function handleSystemData(data) {
-            if (data.cpu !== undefined) {
-                document.getElementById('cpu-usage').textContent = data.cpu + '%';
-            }
-            if (data.memory !== undefined) {
-                document.getElementById('memory-usage').textContent = data.memory + ' MB';
-            }
-            if (data.temperature !== undefined) {
-                document.getElementById('temperature').textContent = data.temperature + '°C';
-            }
-            if (data.uptime !== undefined) {
-                document.getElementById('uptime').textContent = data.uptime;
-            }
-            if (data.latency !== undefined) {
-                document.getElementById('latency').textContent = data.latency + ' ms';
-            }
-            if (data.signal_quality !== undefined) {
-                document.getElementById('signal-quality').textContent = data.signal_quality + '%';
-            }
+            addLogEntry('Protocol selected: ' + protocol, 'info');
+            sendCommand(`#PROTO:SELECT ${protocol}`);
         }
 
         // Command sending
-        function sendCommand(cmd) {
+        function sendCommand(command) {
             if (client && client.connected) {
-                client.publish(`${base_topic}/cmds`, cmd);
-                addLogEntry(cmd, 'tx');
+                client.publish(`${baseTopic}/cmds`, command);
+                addLogEntry('TX: ' + command, 'tx');
             } else {
-                alert("Not connected to cloud relay.");
+                alert('Not connected to cloud relay.');
             }
         }
 
-        function sendPIDParams() {
-            const kp = document.getElementById('pid-kp').value;
-            const ki = document.getElementById('pid-ki').value;
-            const kd = document.getElementById('pid-kd').value;
-            const setpoint = document.getElementById('pid-setpoint').value;
-            
-            const cmd = `#PID:PARAMS ${kp},${ki},${kd},${setpoint}`;
-            sendCommand(cmd);
+        // Function generator controls
+        function updateFunctionGenerator() {
+            const amplitude = document.getElementById('amplitude').value;
+            const offset = document.getElementById('offset').value;
+            const command = `#FG:PARAMS ${amplitude},${offset}`;
+            sendCommand(command);
+            addLogEntry(`Function generator updated: Amp=${amplitude}V, Offset=${offset}V`, 'info');
+        }
+
+        // PID controls
+        function updatePID() {
+            const kp = document.getElementById('kp').value;
+            const ki = document.getElementById('ki').value;
+            const kd = document.getElementById('kd').value;
+            const setpoint = document.getElementById('setpoint').value;
+            const command = `#PID:PARAMS ${kp},${ki},${kd},${setpoint}`;
+            sendCommand(command);
             addLogEntry(`PID params updated: Kp=${kp}, Ki=${ki}, Kd=${kd}, Setpoint=${setpoint}`, 'info');
         }
 
-        function updateFGParams() {
-            const amplitude = document.getElementById('fg-amplitude').value;
-            const offset = document.getElementById('fg-offset').value;
-            
-            const cmd = `#FG:PARAMS ${amplitude},${offset}`;
-            sendCommand(cmd);
-            addLogEntry(`Function generator params updated: Amp=${amplitude}V, Offset=${offset}V`, 'info');
-        }
-
+        // System configuration
         function updateSystemConfig() {
             const sampleRate = document.getElementById('sample-rate').value;
             const bufferSize = document.getElementById('buffer-size').value;
             const triggerLevel = document.getElementById('trigger-level').value;
             const triggerEdge = document.getElementById('trigger-edge').value;
-            
-            const cmd = `#SYS:CONFIG ${sampleRate},${bufferSize},${triggerLevel},${triggerEdge}`;
-            sendCommand(cmd);
+            const command = `#SYS:CONFIG ${sampleRate},${bufferSize},${triggerLevel},${triggerEdge}`;
+            sendCommand(command);
             addLogEntry(`System config updated: SR=${sampleRate}, Buffer=${bufferSize}, Trigger=${triggerLevel}V (${triggerEdge})`, 'info');
         }
 
@@ -1707,7 +1282,7 @@
             const notes = document.getElementById('notes-area').value;
             localStorage.setItem('stm32-lab-notes', notes);
             localStorage.setItem('stm32-lab-notes-timestamp', new Date().toISOString());
-            addLogEntry('Notes saved locally', 'info');
+            addLogEntry('Notes saved locally', 'success');
             alert('Notes saved successfully!');
         }
 
@@ -1718,7 +1293,7 @@
             if (notes) {
                 document.getElementById('notes-area').value = notes;
                 const date = timestamp ? new Date(timestamp).toLocaleString() : 'Unknown';
-                addLogEntry(`Notes loaded from ${date}`, 'info');
+                addLogEntry('Notes loaded from ' + date, 'success');
                 alert('Notes loaded successfully!');
             } else {
                 alert('No saved notes found');
@@ -1756,11 +1331,11 @@
                 author: author,
                 timestamp: timestamp,
                 content: notes,
-                session: base_topic.split('/')[1]
+                session: baseTopic.split('/')[1]
             };
             
-            client.publish(`${base_topic}/notes`, JSON.stringify(noteData));
-            addLogEntry(`Notes shared by ${author}`, 'info');
+            client.publish(`${baseTopic}/notes`, JSON.stringify(noteData));
+            addLogEntry(`Notes shared by ${author}`, 'success');
             alert('Notes shared successfully!');
         }
 
@@ -1774,47 +1349,6 @@
             a.click();
             URL.revokeObjectURL(url);
             alert('Notes exported successfully!');
-        }
-
-        function handleSharedNotes(noteData) {
-            const sharedDiv = document.getElementById('shared-notes');
-            const date = new Date(noteData.timestamp).toLocaleString();
-            
-            const noteHtml = `
-                <div style="border-bottom: 1px solid var(--BORDER); padding: 12px; margin-bottom: 10px; border-radius: 8px; background: rgba(var(--CARD_BG), 0.5);">
-                    <div style="color: var(--PRIMARY); font-weight: 600; margin-bottom: 8px;">
-                        ${noteData.author} - ${date}
-                    </div>
-                    <div style="color: var(--TEXT); white-space: pre-wrap; line-height: 1.5;">
-                        ${noteData.content}
-                    </div>
-                </div>
-            `;
-            
-            sharedDiv.innerHTML = noteHtml + sharedDiv.innerHTML;
-            
-            // Keep only last 10 shared notes
-            const notes = sharedDiv.children;
-            while (notes.length > 10) {
-                sharedDiv.removeChild(notes[notes.length - 1]);
-            }
-        }
-
-        function updateMMHistory(reading) {
-            const historyDiv = document.getElementById('mm-history');
-            const timestamp = new Date().toLocaleTimeString();
-            const entry = `<div style="padding: 4px; border-bottom: 1px solid var(--BORDER);">
-                <span style="color: var(--PRIMARY);">${timestamp}</span> - 
-                <span style="color: var(--TEXT);">${reading.toFixed(3)} V</span>
-            </div>`;
-            
-            historyDiv.innerHTML = entry + historyDiv.innerHTML;
-            
-            // Keep only last 20 readings
-            const readings = historyDiv.children;
-            while (readings.length > 20) {
-                historyDiv.removeChild(readings[readings.length - 1]);
-            }
         }
 
         // Debug console
@@ -1834,9 +1368,86 @@
             alert('Debug log exported!');
         }
 
-        function toggleDebugMode() {
-            debugMode = !debugMode;
-            alert(`Debug mode ${debugMode ? 'enabled' : 'disabled'}`);
+        // Data handlers
+        function handleProtocolData(data) {
+            const resultsDiv = document.getElementById('protocol-results');
+            if (data.results && data.results.length > 0) {
+                let html = '<table style="width: 100%; border-collapse: collapse;">';
+                html += '<tr style="border-bottom: 1px solid #dee2e6;"><th style="padding: 8px; text-align: left;">Time</th><th style="padding: 8px; text-align: left;">Protocol</th><th style="padding: 8px; text-align: left;">Info</th></tr>';
+                data.results.forEach(result => {
+                    html += `<tr style="border-bottom: 1px solid #f1f3f4;">
+                        <td style="padding: 8px;">${result.time_ms}</td>
+                        <td style="padding: 8px; font-weight: 500;">${result.proto}</td>
+                        <td style="padding: 8px;">${result.info}</td>
+                    </tr>`;
+                });
+                html += '</table>';
+                resultsDiv.innerHTML = html;
+                
+                document.getElementById('packet-count').textContent = data.results.length;
+                document.getElementById('error-rate').textContent = '0%';
+            } else {
+                resultsDiv.innerHTML = 'No protocol data decoded yet...';
+            }
+        }
+
+        function handleSystemData(data) {
+            if (data.cpu !== undefined) {
+                document.getElementById('cpu-usage').textContent = data.cpu + '%';
+            }
+            if (data.memory !== undefined) {
+                document.getElementById('memory-usage').textContent = data.memory + ' MB';
+            }
+            if (data.temperature !== undefined) {
+                document.getElementById('temperature').textContent = data.temperature + '°C';
+            }
+            if (data.uptime !== undefined) {
+                document.getElementById('uptime').textContent = data.uptime;
+            }
+            if (data.latency !== undefined) {
+                document.getElementById('latency').textContent = data.latency + ' ms';
+            }
+            if (data.signal_quality !== undefined) {
+                document.getElementById('signal-quality').textContent = data.signal_quality + '%';
+            }
+        }
+
+        function handleSharedNotes(noteData) {
+            const sharedDiv = document.getElementById('shared-notes');
+            const date = new Date(noteData.timestamp).toLocaleString();
+            
+            const noteHtml = `
+                <div style="border-bottom: 1px solid #f1f3f4; padding: 12px; margin-bottom: 8px;">
+                    <div style="font-weight: 500; margin-bottom: 8px;">
+                        ${noteData.author} - ${date}
+                    </div>
+                    <div style="white-space: pre-wrap; line-height: 1.5;">
+                        ${noteData.content}
+                    </div>
+                </div>
+            `;
+            
+            sharedDiv.innerHTML = noteHtml + sharedDiv.innerHTML;
+            
+            // Keep only last 10 shared notes
+            const notes = sharedDiv.children;
+            while (notes.length > 10) {
+                sharedDiv.removeChild(notes[notes.length - 1]);
+            }
+        }
+
+        function updateMultimeterHistory(reading) {
+            const historyDiv = document.getElementById('multimeter-history');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = `<div class="log-entry rx">[${timestamp}] ${reading.toFixed(3)} V</div>`;
+            
+            historyDiv.innerHTML = entry + historyDiv.innerHTML;
+            
+            // Keep only last 20 readings
+            const readings = historyDiv.children;
+            while (readings.length > 20) {
+                historyDiv.removeChild(readings[readings.length - 1]);
+            }
         }
 
         // Utility functions
@@ -1844,44 +1455,9 @@
             const now = new Date();
             const timeStr = now.toLocaleTimeString();
             document.getElementById('timestamp').textContent = timeStr;
-            
-            // Update FPS
-            if (window.fps) {
-                document.getElementById('fps').textContent = window.fps;
-            }
         }
 
-        function showNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: ${type === 'error' ? 'var(--ACCENT_RED)' : type === 'warning' ? 'var(--ACCENT_AMBER)' : 'var(--PRIMARY)'};
-                color: var(--DARK_BG);
-                padding: 15px 20px;
-                border-radius: 8px;
-                font-weight: 600;
-                z-index: 10000;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-                transform: translateX(400px);
-            `;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.transform = 'translateX(0)';
-            }, 100);
-            
-            setTimeout(() => {
-                notification.style.transform = 'translateX(400px)';
-                setTimeout(() => {
-                    document.body.removeChild(notification);
-                }, 300);
-            }, 3000);
-        }
-
-        function addLogEntry(message, type = 'rx') {
+        function addLogEntry(message, type = 'info') {
             const debugConsole = document.getElementById('debug-console');
             const timestamp = new Date().toLocaleTimeString();
             const entry = `<div class="log-entry ${type}">[${timestamp}] ${message}</div>`;
