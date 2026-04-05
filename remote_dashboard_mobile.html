@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>STM32 Remote Laboratory - Mobile Optimized</title>
+    <title>STM32 Remote Laboratory - Mobile Interface</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         /* Mobile-First Academic CSS */
@@ -419,8 +419,10 @@
             <h1>STM32 Remote Laboratory</h1>
             <div class="status-bar">
                 <div class="status-item">
-                    <span class="status-label">Status:</span>
-                    <span class="status-value" id="connection-status">Disconnected</span>
+                    <div class="connection-status">
+                        <div class="status-indicator" id="status-indicator"></div>
+                        <span id="connection-status">Disconnected</span>
+                    </div>
                 </div>
                 <div class="status-item">
                     <span class="status-label">Session:</span>
@@ -428,7 +430,9 @@
                 </div>
                 <div class="status-item">
                     <span class="status-label">Broker:</span>
-                    <input type="text" id="broker-url" class="input-control" placeholder="test.mosquitto.org:1883" style="flex: 1; min-width: 200px;">
+                    <input type="text" id="broker-url" class="input-control" 
+                           placeholder="test.mosquitto.org:1883" 
+                           style="flex: 1; min-width: 150px; padding: 4px 8px;">
                 </div>
                 <div class="status-item">
                     <button class="btn btn-primary" id="connect-btn" onclick="toggleConnection()">Connect</button>
@@ -443,11 +447,10 @@
             <button class="tab-button" onclick="switchTab('function')">Function Generator</button>
             <button class="tab-button" onclick="switchTab('protocol')">Protocol</button>
             <button class="tab-button" onclick="switchTab('pid')">PID Control</button>
-            <button class="tab-button" onclick="switchTab('notes')">Notes</button>
         </div>
 
         <!-- Oscilloscope Tab -->
-        <div class="tab-pane" id="oscilloscope">
+        <div class="tab-pane active" id="oscilloscope">
             <div class="control-panel">
                 <div class="panel-header">Oscilloscope Controls</div>
                 <div class="controls-grid">
@@ -470,14 +473,42 @@
                         </select>
                     </div>
                 </div>
+                <div class="controls-grid">
+                    <button class="btn btn-secondary" onclick="sendCommand('#MODE:D')">DSO Mode</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#TRIG:AUTO')">Auto Trigger</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#TRIG:SINGLE')">Single Trigger</button>
+                </div>
             </div>
+            
             <div class="chart-container">
                 <canvas id="oscilloscope-chart"></canvas>
+            </div>
+            
+            <div class="control-panel">
+                <div class="panel-header">Live Oscilloscope Data</div>
+                <div class="live-data-grid">
+                    <div class="live-data-item" id="dso-vrms">
+                        <div class="value-label">VRMS</div>
+                        <div class="value-number">0.000</div>
+                    </div>
+                    <div class="live-data-item" id="dso-vpp">
+                        <div class="value-label">VPP</div>
+                        <div class="value-number">0.000</div>
+                    </div>
+                    <div class="live-data-item" id="dso-freq">
+                        <div class="value-label">Frequency</div>
+                        <div class="value-number">0</div>
+                    </div>
+                    <div class="live-data-item" id="dso-samples">
+                        <div class="value-label">Samples</div>
+                        <div class="value-number">0</div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Multimeter Tab -->
-        <div class="tab-pane" id="multimeter" style="display:none;">
+        <div class="tab-pane" id="multimeter">
             <div class="control-panel">
                 <div class="panel-header">Measurement Mode</div>
                 <div class="controls-grid">
@@ -487,23 +518,31 @@
                             <option value="V">DC Voltage</option>
                             <option value="A">DC Current</option>
                             <option value="R">Resistance</option>
-                            <option value="C">Capacitance</option>
+                            <option value="F">Frequency</option>
                         </select>
                     </div>
                     <div class="control-group">
                         <label class="control-label">Range</label>
                         <select class="input-control" id="meter-range">
                             <option value="12">12V</option>
+                            <option value="16">16V</option>
                             <option value="24">24V</option>
-                            <option value="48">48V</option>
                         </select>
                     </div>
                 </div>
+                <div class="controls-grid">
+                    <button class="btn btn-secondary" onclick="sendCommand('#MODE:V')">DC Voltage</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#MODE:A')">DC Current</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#MODE:R')">Resistance</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#MODE:F')">Frequency</button>
+                </div>
             </div>
+            
             <div class="value-display">
-                <div class="value-label">Measurement</div>
+                <div class="value-label">Current Measurement</div>
                 <div class="value-number" id="meter-value">0.000</div>
             </div>
+            
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">Min</div>
@@ -517,31 +556,41 @@
                     <div class="stat-label">Avg</div>
                     <div class="stat-value" id="meter-avg">0.000</div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-label">Samples</div>
+                    <div class="stat-value" id="meter-count">0</div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="multimeter-chart"></canvas>
             </div>
         </div>
 
         <!-- Function Generator Tab -->
-        <div class="tab-pane" id="function" style="display:none;">
+        <div class="tab-pane" id="function">
             <div class="control-panel">
                 <div class="panel-header">Waveform Generator</div>
                 <div class="controls-grid">
                     <div class="control-group">
                         <label class="control-label">Waveform</label>
                         <div class="controls-grid">
-                            <button class="btn btn-secondary" onclick="sendCommand('#FG:WAVE:SQ')">Square</button>
-                            <button class="btn btn-secondary" onclick="sendCommand('#FG:WAVE:SI')">Sine</button>
-                            <button class="btn btn-secondary" onclick="sendCommand('#FG:WAVE:TR')">Triangle</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#WAVE:SQ')">Square</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#WAVE:SI')">Sine</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#WAVE:TR')">Triangle</button>
                         </div>
                     </div>
                     <div class="control-group">
                         <label class="control-label">Frequency</label>
                         <div class="controls-grid">
-                            <button class="btn btn-secondary" onclick="sendCommand('#FG:FREQ 10')">10 Hz</button>
-                            <button class="btn btn-secondary" onclick="sendCommand('#FG:FREQ 100')">100 Hz</button>
-                            <button class="btn btn-secondary" onclick="sendCommand('#FG:FREQ 1000')">1 kHz</button>
-                            <button class="btn btn-secondary" onclick="sendCommand('#FG:FREQ 10000')">10 kHz</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#WAVE:F=10')">10 Hz</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#WAVE:F=100')">100 Hz</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#WAVE:F=1000')">1 kHz</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#WAVE:F=10000')">10 kHz</button>
                         </div>
                     </div>
+                </div>
+                <div class="controls-grid">
                     <div class="control-group">
                         <label class="control-label">Amplitude</label>
                         <input type="range" class="input-control" id="amplitude" min="0" max="5" step="0.1" value="2.5">
@@ -557,55 +606,69 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="control-panel">
-                <div class="panel-header">Output Control</div>
                 <div class="controls-grid">
                     <button class="btn btn-primary" onclick="updateFunctionGenerator()">Update</button>
-                    <button class="btn btn-secondary" onclick="sendCommand('#FG:OUTPUT ON')">Output ON</button>
-                    <button class="btn btn-danger" onclick="sendCommand('#FG:OUTPUT OFF')">Output OFF</button>
+                    <button class="btn btn-secondary" onclick="sendCommand('#WAVE:ON')">Output ON</button>
+                    <button class="btn btn-danger" onclick="sendCommand('#WAVE:OFF')">Output OFF</button>
                 </div>
             </div>
-            <div class="value-display">
-                <div class="stat-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">Waveform</div>
-                        <div class="stat-value" id="waveform">Square</div>
+            
+            <div class="control-panel">
+                <div class="panel-header">Generator Status</div>
+                <div class="live-data-grid">
+                    <div class="live-data-item" id="fg-waveform">
+                        <div class="value-label">Waveform</div>
+                        <div class="value-number">Square</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Frequency</div>
-                        <div class="stat-value" id="freq-status">1000 Hz</div>
+                    <div class="live-data-item" id="fg-frequency">
+                        <div class="value-label">Frequency</div>
+                        <div class="value-number">1000</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Amplitude</div>
-                        <div class="stat-value" id="amp-status">2.5V</div>
+                    <div class="live-data-item" id="fg-amplitude">
+                        <div class="value-label">Amplitude</div>
+                        <div class="value-number">2.5</div>
+                    </div>
+                    <div class="live-data-item" id="fg-status">
+                        <div class="value-label">Output</div>
+                        <div class="value-number">OFF</div>
                     </div>
                 </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="function-chart"></canvas>
             </div>
         </div>
 
         <!-- Protocol Tab -->
-        <div class="tab-pane" id="protocol" style="display:none;">
+        <div class="tab-pane" id="protocol">
             <div class="control-panel">
                 <div class="panel-header">Protocol Commands</div>
                 <div class="controls-grid">
                     <div class="control-group">
+                        <label class="control-label">Custom Command</label>
+                        <input type="text" id="custom-command" class="input-control" placeholder="#MODE:V">
+                        <button class="btn btn-primary" onclick="sendCustomCommand()">Send Command</button>
+                    </div>
+                    <div class="control-group">
                         <label class="control-label">Quick Commands</label>
                         <div class="controls-grid">
-                            <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE V')">DC Voltage</button>
-                            <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE A')">DC Current</button>
-                            <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE R')">Resistance</button>
-                            <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE F')">Frequency</button>
-                            <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE AC')">AC Voltage</button>
-                            <button class="btn btn-secondary" onclick="sendCommand('#MM:MODE CAP')">Capacitance</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#MODE:V')">DC Voltage</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#MODE:A')">DC Current</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#MODE:R')">Resistance</button>
+                            <button class="btn btn-secondary" onclick="sendCommand('#MODE:F')">Frequency</button>
                         </div>
                     </div>
                 </div>
             </div>
+            
+            <div class="message-log" id="message-log">
+                <div class="message">Protocol log will appear here...</div>
+            </div>
         </div>
 
         <!-- PID Control Tab -->
-        <div class="tab-pane" id="pid" style="display:none;">
+        <div class="tab-pane" id="pid">
             <div class="control-panel">
                 <div class="panel-header">PID Control</div>
                 <div class="controls-grid">
@@ -626,9 +689,6 @@
                         <input type="number" class="input-control" id="setpoint" value="5.0" step="0.1" min="0" max="12">
                     </div>
                 </div>
-            </div>
-            <div class="control-panel">
-                <div class="panel-header">PID Actions</div>
                 <div class="controls-grid">
                     <button class="btn btn-primary" onclick="sendPIDCommand()">Apply Gains</button>
                     <button class="btn btn-secondary" onclick="sendCommand('#PID:START')">Start</button>
@@ -636,17 +696,31 @@
                     <button class="btn btn-secondary" onclick="sendCommand('#PID:RESET')">Reset</button>
                 </div>
             </div>
-        </div>
-
-        <!-- Notes Tab -->
-        <div class="tab-pane" id="notes" style="display:none;">
+            
             <div class="control-panel">
-                <div class="panel-header">Session Notes</div>
-                <textarea class="input-control" id="notes" rows="8" placeholder="Enter your notes here..."></textarea>
-                <div class="controls-grid">
-                    <button class="btn btn-primary" onclick="saveNotes()">Save Notes</button>
-                    <button class="btn btn-secondary" onclick="clearNotes()">Clear</button>
+                <div class="panel-header">PID Status</div>
+                <div class="live-data-grid">
+                    <div class="live-data-item" id="pid-pv">
+                        <div class="value-label">Process Value</div>
+                        <div class="value-number">0.000</div>
+                    </div>
+                    <div class="live-data-item" id="pid-sp">
+                        <div class="value-label">Setpoint</div>
+                        <div class="value-number">5.000</div>
+                    </div>
+                    <div class="live-data-item" id="pid-output">
+                        <div class="value-label">Output</div>
+                        <div class="value-number">0.000</div>
+                    </div>
+                    <div class="live-data-item" id="pid-error">
+                        <div class="value-label">Error</div>
+                        <div class="value-number">0.000</div>
+                    </div>
                 </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="pid-chart"></canvas>
             </div>
         </div>
     </div>
@@ -657,114 +731,35 @@
         let isConnected = false;
         let currentTab = 'oscilloscope';
         let sessionId = 'mobile_' + Math.random().toString(36).substr(2, 9);
-        let brokerUrl = 'wss://test.mosquitto.org:8081/mqtt';  // WebSocket URL for better mobile compatibility
 
         // Chart instances
         let oscilloscopeChart;
         let multimeterChart;
+        let functionChart;
+        let pidChart;
+
+        // Data storage
+        let oscilloscopeData = [];
+        let multimeterData = [];
+        let functionData = [];
+        let pidData = [];
+        let maxDataPoints = 100;
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            initializeMQTT();
             initializeCharts();
             updateConnectionStatus('Disconnected');
             document.getElementById('session-id').textContent = sessionId;
-        });
-
-        function initializeMQTT() {
-            client = new Paho.MQTT.Client(sessionId, sessionId);
             
-            client.onConnectionLost = function(responseObject) {
-                console.log('Connection lost:', responseObject.errorMessage);
-                updateConnectionStatus('Reconnecting...');
-            };
-
-            client.onMessageArrived = function(message) {
-                try {
-                    const payload = message.payloadString;
-                    console.log('MQTT message received:', payload);
-                    handleMessage(payload);
-                } catch (error) {
-                    console.error('Error parsing MQTT message:', error);
-                }
-            };
-
-            connectToBroker();
-        }
-
-        function connectToBroker() {
-            const brokerUrlInput = document.getElementById('broker-url');
-            const brokerUrl = brokerUrlInput.value.trim() || 'wss://test.mosquitto.org:8081/mqtt';
-            const useSSL = brokerUrl.startsWith('wss://');
-            
-            console.log('Connecting to MQTT broker:', brokerUrl);
-            
-            client.connect({
-                onSuccess: function() {
-                    isConnected = true;
-                    updateConnectionStatus('Connected');
-                    updateConnectButton('Disconnect');
-                    console.log('MQTT connected successfully');
-                },
-                onFailure: function(responseObject) {
-                    console.error('MQTT connection failed:', responseObject.errorMessage);
-                    updateConnectionStatus('Connection Failed');
-                    updateConnectButton('Connect');
-                },
-                useSSL: useSSL,
-                cleanSession: true,
-                reconnectPeriod: 5,
-                timeout: 10
+            // Set up input listeners
+            document.getElementById('amplitude').addEventListener('input', function(e) {
+                document.getElementById('amp-value').textContent = e.target.value + 'V';
             });
-        }
 
-        function toggleConnection() {
-            if (isConnected) {
-                disconnectMQTT();
-            } else {
-                connectMQTT();
-            }
-        }
-
-        function connectMQTT() {
-            if (!isConnected) {
-                client.connect({
-                    onSuccess: function() {
-                        isConnected = true;
-                        updateConnectionStatus('Connected');
-                        updateConnectButton('Disconnect');
-                        console.log('MQTT connected successfully');
-                    },
-                    onFailure: function(responseObject) {
-                        console.error('MQTT connection failed:', responseObject.errorMessage);
-                        updateConnectionStatus('Connection Failed');
-                        updateConnectButton('Connect');
-                    },
-                    useSSL: true,
-                    cleanSession: true,
-                    reconnectPeriod: 5,
-                    timeout: 10
-                });
-            }
-        }
-
-        function disconnectMQTT() {
-            if (isConnected && client) {
-                isConnected = false;
-                client.disconnect();
-                updateConnectionStatus('Disconnected');
-                updateConnectButton('Connect');
-                console.log('MQTT disconnected');
-            }
-        }
-
-        function updateConnectButton(text) {
-            const btn = document.getElementById('connect-btn');
-            if (btn) {
-                btn.textContent = text;
-                btn.className = text === 'Connect' ? 'btn btn-primary' : 'btn btn-danger';
-            }
-        }
+            document.getElementById('offset').addEventListener('input', function(e) {
+                document.getElementById('offset-value').textContent = e.target.value + 'V';
+            });
+        });
 
         function initializeCharts() {
             // Oscilloscope Chart
@@ -779,12 +774,16 @@
                         backgroundColor: 'rgba(0, 102, 204, 0.1)',
                         borderWidth: 2,
                         pointRadius: 0,
-                        tension: 0
+                        tension: 0,
+                        fill: true
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: {
+                        duration: 0
+                    },
                     plugins: {
                         legend: {
                             display: false
@@ -795,14 +794,197 @@
                             type: 'linear',
                             title: {
                                 display: true,
-                                text: 'Time (s)'
+                                text: 'Time (s)',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
                             }
                         },
                         y: {
                             type: 'linear',
                             title: {
                                 display: true,
-                                text: 'Amplitude (V)'
+                                text: 'Amplitude (V)',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Multimeter Chart
+            const multimeterCtx = document.getElementById('multimeter-chart').getContext('2d');
+            multimeterChart = new Chart(multimeterCtx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Measurement',
+                        data: [],
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 1,
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 0
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Time (s)',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Value',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Function Generator Chart
+            const functionCtx = document.getElementById('function-chart').getContext('2d');
+            functionChart = new Chart(functionCtx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Waveform',
+                        data: [],
+                        borderColor: '#ffc107',
+                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 0
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Time (s)',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Amplitude (V)',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // PID Chart
+            const pidCtx = document.getElementById('pid-chart').getContext('2d');
+            pidChart = new Chart(pidCtx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Process Value',
+                        data: [],
+                        borderColor: '#17a2b8',
+                        backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 1,
+                        tension: 0.1,
+                        fill: false
+                    }, {
+                        label: 'Setpoint',
+                        data: [],
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0,
+                        borderDash: [5, 5],
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 0
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                color: '#6c757d'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Time (s)',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Value (V)',
+                                color: '#6c757d'
+                            },
+                            ticks: {
+                                color: '#6c757d'
                             }
                         }
                     }
@@ -810,129 +992,119 @@
             });
         }
 
-        function handleMessage(payload) {
-            try {
-                const msg = payload.trim();
-                console.log('Processing message:', msg);
+        function initializeMQTT() {
+            client = new Paho.MQTT.Client(sessionId, sessionId);
+            
+            client.onConnectionLost = function(responseObject) {
+                console.log('Connection lost:', responseObject.errorMessage);
+                updateConnectionStatus('Reconnecting...');
+            };
 
-                // Parse different message types
-                if (msg.startsWith('#DATA:')) {
-                    handleDataMessage(msg);
-                } else if (msg.startsWith('#DSO:')) {
-                    handleDSOMessage(msg);
-                } else if (msg.startsWith('#MM:')) {
-                    handleMultimeterMessage(msg);
-                } else if (msg.startsWith('#FG:')) {
-                    handleFunctionGeneratorMessage(msg);
-                } else if (msg.startsWith('#PID:')) {
-                    handlePIDMessage(msg);
+            client.onMessageArrived = function(message) {
+                try {
+                    const payload = message.payloadString;
+                    console.log('MQTT message received:', payload);
+                    handleMessage(payload);
+                    addMessageToLog('received', payload);
+                } catch (error) {
+                    console.error('Error parsing MQTT message:', error);
                 }
-            } catch (error) {
-                console.error('Error handling message:', error);
-            }
-        }
+            };
 
-        function handleDataMessage(msg) {
-            const match = msg.match(/#DATA:M=([A-VD]),X=([\d.]+)/);
-            if (match && currentTab === 'oscilloscope') {
-                const time = (Date.now() / 1000) % 10; // Simple time base
-                const value = parseFloat(match[2]);
+            function connectToBroker() {
+                const brokerUrlInput = document.getElementById('broker-url');
+                const brokerUrl = brokerUrlInput.value.trim() || 'wss://test.mosquitto.org:8081/mqtt';
+                const useSSL = brokerUrl.startsWith('wss://');
                 
-                oscilloscopeChart.data.datasets[0].data.push({
-                    x: time,
-                    y: value
+                console.log('Connecting to MQTT broker:', brokerUrl);
+                
+                client.connect({
+                    onSuccess: function() {
+                        isConnected = true;
+                        updateConnectionStatus('Connected');
+                        updateConnectButton('Disconnect');
+                        console.log('MQTT connected successfully');
+                    },
+                    onFailure: function(responseObject) {
+                        console.error('MQTT connection failed:', responseObject.errorMessage);
+                        updateConnectionStatus('Connection Failed');
+                        updateConnectButton('Connect');
+                    },
+                    useSSL: useSSL,
+                    cleanSession: true,
+                    reconnectPeriod: 5,
+                    timeout: 10
                 });
+            }
 
-                // Keep only last 100 points for performance
-                if (oscilloscopeChart.data.datasets[0].data.length > 100) {
-                    oscilloscopeChart.data.datasets[0].data.shift();
-                }
+            connectToBroker();
+        }
 
-                oscilloscopeChart.update('none');
+        function toggleConnection() {
+            if (isConnected) {
+                disconnectMQTT();
+            } else {
+                connectMQTT();
             }
         }
 
-        function handleDSOMessage(msg) {
-            const samples = msg.substring(5).split(',').map(parseFloat);
-            if (samples.length > 0 && currentTab === 'oscilloscope') {
-                oscilloscopeChart.data.datasets[0].data = samples.map((value, index) => ({
-                    x: index * 0.01,
-                    y: value
-                }));
-                oscilloscopeChart.update('none');
-            }
-        }
-
-        function handleMultimeterMessage(msg) {
-            const match = msg.match(/#DATA:M=([A-VDR]),X=([\d.]+)/);
-            if (match && currentTab === 'multimeter') {
-                const value = parseFloat(match[2]);
-                const mode = match[1];
+        function connectMQTT() {
+            if (!isConnected) {
+                const brokerUrlInput = document.getElementById('broker-url');
+                const brokerUrl = brokerUrlInput.value.trim() || 'wss://test.mosquitto.org:8081/mqtt';
+                const useSSL = brokerUrl.startsWith('wss://');
                 
-                document.getElementById('meter-value').textContent = value.toFixed(3);
-                
-                // Update mode display
-                const modeText = {
-                    'V': 'DC Voltage',
-                    'A': 'DC Current',
-                    'R': 'Resistance',
-                    'D': 'AC Voltage',
-                    'C': 'Capacitance'
-                };
-                document.querySelector('#meter-mode option[value="' + mode + '"]').selected = true;
-            }
-        }
-
-        function handleFunctionGeneratorMessage(msg) {
-            if (currentTab === 'function') {
-                // Parse frequency
-                const freqMatch = msg.match(/#FG:FREQ\s+([\d.]+)/);
-                if (freqMatch) {
-                    const freq = parseFloat(freqMatch[1]);
-                    document.getElementById('freq-status').textContent = freq + ' Hz';
-                }
-
-                // Parse amplitude
-                const ampMatch = msg.match(/#FG:PARAMS\s+([\d.-]+),/);
-                if (ampMatch) {
-                    const parts = ampMatch[1].split(',');
-                    if (parts.length >= 1) {
-                        document.getElementById('amp-status').textContent = parts[0] + 'V';
-                        document.getElementById('amplitude').value = parts[0];
-                    }
-                    if (parts.length >= 2) {
-                        document.getElementById('offset-value').textContent = parts[1] + 'V';
-                        document.getElementById('offset').value = parts[1];
-                    }
-                }
-
-                // Parse waveform
-                if (msg.includes('SQ')) {
-                    document.getElementById('waveform').textContent = 'Square';
-                } else if (msg.includes('SI')) {
-                    document.getElementById('waveform').textContent = 'Sine';
-                } else if (msg.includes('TR')) {
-                    document.getElementById('waveform').textContent = 'Triangle';
+                try {
+                    client.connect({
+                        onSuccess: function() {
+                            isConnected = true;
+                            updateConnectionStatus('Connected');
+                            updateConnectButton('Disconnect');
+                            console.log('MQTT connected successfully');
+                            addMessageToLog('received', 'Connected to MQTT broker');
+                        },
+                        onFailure: function(responseObject) {
+                            console.error('MQTT connection failed:', responseObject.errorMessage);
+                            updateConnectionStatus('Connection Failed');
+                            updateConnectButton('Connect');
+                            addMessageToLog('received', 'Connection failed: ' + responseObject.errorMessage);
+                        },
+                        useSSL: useSSL,
+                        cleanSession: true,
+                        reconnectPeriod: 5,
+                        timeout: 10
+                    });
+                } catch (error) {
+                    console.error('Error creating MQTT client:', error);
+                    updateConnectionStatus('Error');
+                    addMessageToLog('received', 'Error: ' + error.message);
                 }
             }
         }
 
-        function handlePIDMessage(msg) {
-            if (currentTab === 'pid') {
-                if (msg.includes('START')) {
-                    console.log('PID started');
-                } else if (msg.includes('STOP')) {
-                    console.log('PID stopped');
-                } else if (msg.includes('RESET')) {
-                    console.log('PID reset');
-                }
+        function disconnectMQTT() {
+            if (isConnected && client) {
+                isConnected = false;
+                client.disconnect();
+                updateConnectionStatus('Disconnected');
+                updateConnectButton('Connect');
+                console.log('MQTT disconnected');
+                addMessageToLog('received', 'Disconnected from MQTT broker');
+            }
+        }
+
+        function updateConnectButton(text) {
+            const btn = document.getElementById('connect-btn');
+            if (btn) {
+                btn.textContent = text;
+                btn.className = text === 'Connect' ? 'btn btn-primary' : 'btn btn-danger';
             }
         }
 
         function switchTab(tabName) {
             // Hide all tabs
             document.querySelectorAll('.tab-pane').forEach(pane => {
-                pane.style.display = 'none';
+                pane.classList.remove('active');
             });
             
             // Remove active class from all buttons
@@ -943,7 +1115,7 @@
             // Show selected tab
             const selectedTab = document.getElementById(tabName);
             if (selectedTab) {
-                selectedTab.style.display = 'block';
+                selectedTab.classList.add('active');
             }
             
             // Add active class to selected button
@@ -958,9 +1130,147 @@
                 message.destinationName = `stm32lab/${sessionId}/cmds`;
                 client.send(message);
                 console.log('Command sent:', command);
+                addMessageToLog('sent', command);
             } else {
                 console.log('Not connected - command not sent:', command);
+                addMessageToLog('received', 'Not connected - command not sent: ' + command);
             }
+        }
+
+        function sendCustomCommand() {
+            const customCommand = document.getElementById('custom-command').value.trim();
+            if (customCommand) {
+                sendCommand(customCommand);
+                document.getElementById('custom-command').value = '';
+            }
+        }
+
+        function sendPIDCommand() {
+            const kp = document.getElementById('kp').value;
+            const ki = document.getElementById('ki').value;
+            const kd = document.getElementById('kd').value;
+            const sp = document.getElementById('setpoint').value;
+            
+            const command = `#PID:P=${kp},I=${ki},D=${kd},SP=${sp};`;
+            sendCommand(command);
+        }
+
+        function updateFunctionGenerator() {
+            const amplitude = document.getElementById('amplitude').value;
+            const offset = document.getElementById('offset').value;
+            const command = `#WAVE:PARAMS ${amplitude},${offset}`;
+            sendCommand(command);
+        }
+
+        function handleMessage(payload) {
+            try {
+                const msg = payload.trim();
+                console.log('Processing message:', msg);
+
+                // Parse different message types
+                if (msg.startsWith('#DATA:')) {
+                    handleDataMessage(msg);
+                } else if (msg.startsWith('#DSO:')) {
+                    handleDSOMessage(msg);
+                } else if (msg.startsWith('#MM:')) {
+                    handleMultimeterMessage(msg);
+                } else if (msg.startsWith('#WAVE:')) {
+                    handleFunctionGeneratorMessage(msg);
+                } else if (msg.startsWith('#PID:')) {
+                    handlePIDMessage(msg);
+                }
+            } catch (error) {
+                console.error('Error handling message:', error);
+            }
+        }
+
+        function handleDataMessage(msg) {
+            const match = msg.match(/#DATA:M=([A-VDGR]),X=([\d.-]+)/);
+            if (match) {
+                const mode = match[1];
+                const value = parseFloat(match[2]);
+                const time = (Date.now() / 1000) % 10;
+                
+                // Update charts based on mode
+                if (mode === 'D' && currentTab === 'oscilloscope') {
+                    updateOscilloscopeChart(time, value);
+                } else if (mode === 'V' && currentTab === 'multimeter') {
+                    updateMultimeterChart(time, value);
+                    updateMultimeterValue(value);
+                }
+            }
+        }
+
+        function handleDSOMessage(msg) {
+            const samples = msg.substring(5).split(',').map(parseFloat);
+            if (samples.length > 0 && currentTab === 'oscilloscope') {
+                updateOscilloscopeDSO(samples);
+                updateDSOStats(samples);
+            }
+        }
+
+        function handleMultimeterMessage(msg) {
+            const match = msg.match(/#DATA:M=([A-VDRG]),X=([\d.-]+)/);
+            if (match && currentTab === 'multimeter') {
+                const value = parseFloat(match[2]);
+                updateMultimeterValue(value);
+            }
+        }
+
+        function handleFunctionGeneratorMessage(msg) {
+            if (currentTab === 'function') {
+                // Parse frequency
+                const freqMatch = msg.match(/#WAVE:F=([\d.]+)/);
+                if (freqMatch) {
+                    const freq = parseFloat(freqMatch[1]);
+                    updateFunctionGeneratorStatus('frequency', freq);
+                }
+
+                // Parse waveform
+                if (msg.includes('SQ')) {
+                    updateFunctionGeneratorStatus('waveform', 'Square');
+                } else if (msg.includes('SI')) {
+                    updateFunctionGeneratorStatus('waveform', 'Sine');
+                } else if (msg.includes('TR')) {
+                    updateFunctionGeneratorStatus('waveform', 'Triangle');
+                }
+
+                // Parse amplitude
+                const ampMatch = msg.match(/#WAVE:PARAMS ([\d.-]+),/);
+                if (ampMatch) {
+                    const amplitude = parseFloat(ampMatch[1]);
+                    updateFunctionGeneratorStatus('amplitude', amplitude);
+                }
+
+                // Parse status
+                if (msg.includes('ON')) {
+                    updateFunctionGeneratorStatus('status', 'ON');
+                } else if (msg.includes('OFF')) {
+                    updateFunctionGeneratorStatus('status', 'OFF');
+                }
+            }
+        }
+
+        function handlePIDMessage(msg) {
+            if (currentTab === 'pid') {
+                // Parse PID data
+                const pvMatch = msg.match(/#PID:PV=([\d.]+)/);
+                if (pvMatch) {
+                    const pv = parseFloat(pvMatch[1]);
+                    updatePIDStatus('pv', pv);
+                }
+
+                const spMatch = msg.match(/#PID:SP=([\d.]+)/);
+                if (spMatch) {
+                    const sp = parseFloat(spMatch[1]);
+                    updatePIDStatus('sp', sp);
+                }
+
+                const outputMatch = msg.match(/#PID:O=([\d.]+)/);
+                if (outputMatch) {
+                    const output = parseFloat(outputMatch[1]);
+                    updatePIDStatus('output', output);
+                }
         }
 
         function sendPIDCommand() {
