@@ -839,7 +839,7 @@ class MainWindow(QMainWindow):
 
     def _on_nlp_command_sent(self, cmd: str):
         """Send NLP-derived commands to hardware and mirror state in instrument tabs."""
-        self._on_send(cmd)
+        self._send_command(cmd)
         try:
             msg = self._parser.parse(cmd)
             if msg is None:
@@ -854,7 +854,12 @@ class MainWindow(QMainWindow):
                             self.tab_fg._select_wave(name)
                             break
                 if "F" in msg.fields:
-                    self.tab_fg.spin_freq.setValue(int(float(msg.fields["F"])))
+                    freq = int(float(msg.fields["F"]))
+                    # Enforce 1000 Hz cap
+                    if freq > 1000:
+                        freq = 1000
+                        log.warning(f"NL Command frequency capped at 1000 Hz (requested: {msg.fields['F']} Hz)")
+                    self.tab_fg.spin_freq.setValue(freq)
         except Exception as e:
             log.warning("NLP UI sync failed: %s", e)
 
