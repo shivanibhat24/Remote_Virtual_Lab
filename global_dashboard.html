@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STM32 Remote Lab Dashboard</title>
+    <title>STM32 Remote Lab Dashboard v6.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -13,6 +13,10 @@
             --border: #1f2937;
             --primary: #10b981;
             --accent: #3b82f6;
+            --accent-red: #ef4444;
+            --accent-amber: #f59e0b;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #a855f7;
             --text: #f3f4f6;
             --muted: #9ca3af;
         }
@@ -28,7 +32,7 @@
         }
         .container {
             width: 100%;
-            max-width: 1000px;
+            max-width: 1400px;
         }
         .header {
             text-align: center;
@@ -37,6 +41,12 @@
         .header h1 {
             color: var(--primary);
             margin: 0 0 10px 0;
+            font-size: 28px;
+        }
+        .header .subtitle {
+            color: var(--muted);
+            font-size: 14px;
+            margin: 0;
         }
         .auth-panel {
             background-color: var(--panel);
@@ -63,7 +73,7 @@
             color: white;
             border: none;
             padding: 10px 20px;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             border-radius: 4px;
             cursor: pointer;
@@ -78,6 +88,9 @@
         }
         .main-col {
             flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
         .side-col {
             flex: 1;
@@ -111,6 +124,8 @@
             background-color: var(--bg);
             border: 1px solid var(--border);
             color: var(--accent);
+            font-size: 12px;
+            padding: 8px;
         }
         .controls button:hover {
             background-color: var(--border);
@@ -133,13 +148,60 @@
         .connected {
             background-color: var(--primary) !important;
         }
+        .protocol-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .protocol-btn {
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 11px;
+            padding: 6px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .protocol-btn:hover {
+            background-color: var(--border);
+            color: var(--text);
+        }
+        .protocol-btn.active {
+            background-color: var(--accent);
+            color: white;
+        }
+        .waveform-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .log-area {
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 10px;
+            height: 120px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            color: var(--muted);
+        }
+        .log-entry {
+            margin-bottom: 4px;
+        }
+        .log-entry.tx { color: var(--accent); }
+        .log-entry.rx { color: var(--primary); }
+        .log-entry.err { color: var(--accent-red); }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h1>Global Laboratory Interface</h1>
+        <h1>STM32 Remote Laboratory Interface v6.0</h1>
+        <p class="subtitle">15 Protocol Decoder • Function Generator • Multimeter • Cloud Relay</p>
         <div><span id="status-indicator"></span><span id="status-text" style="color: var(--muted);">Waiting for Session ID...</span></div>
     </div>
 
@@ -155,27 +217,60 @@
                 <h3>Live Oscilloscope Reader</h3>
                 <canvas id="dsoChart"></canvas>
             </div>
-        </div>
-        <div class="side-col">
+            
             <div class="card">
-                <h3>Action Panel</h3>
-                <div class="controls">
-                    <button onclick="sendCommand('CONF:VOLT:DC')">Voltmeter Mode</button>
-                    <button onclick="sendCommand('CONF:CURR:DC')">Ammeter Mode</button>
-                    <button onclick="sendCommand('CONF:WAVE:TYPE SQ')">Set Square Wave</button>
-                    <button onclick="sendCommand('CONF:WAVE:TYPE SI')">Set Sine Wave</button>
-                    <button onclick="sendCommand('CONF:FREQ 100')">Freq = 100Hz</button>
-                    <button onclick="sendCommand('CONF:FREQ 1000')">Freq = 1000Hz</button>
+                <h3>Protocol Analyzer Status</h3>
+                <div class="protocol-grid" id="protocol-grid">
+                    <!-- Protocol buttons will be added here -->
+                </div>
+                <div style="margin-top: 15px;">
+                    <div style="color: var(--muted); font-size: 12px;">Active Protocol:</div>
+                    <div id="active-protocol" style="color: var(--accent); font-weight: bold;">None</div>
                 </div>
             </div>
+        </div>
+        
+        <div class="side-col">
             <div class="card">
-                <h3>Statistics</h3>
-                <div style="color: var(--muted);">Mean Voltage</div>
-                <div class="stat-value" id="stat-mean">0.000 V</div>
-                <div style="color: var(--muted);">Peak-to-Peak (Vpp)</div>
-                <div class="stat-value" id="stat-vpp" style="color: var(--accent);">0.000 V</div>
-                <div style="color: var(--muted);">Dominant Freq</div>
-                <div class="stat-value" id="stat-freq" style="color: #ffb86c;">0 Hz</div>
+                <h3>Function Generator Controls</h3>
+                <div class="waveform-controls">
+                    <button onclick="sendCommand('#FG:WAVE:SQ')" style="border-color: var(--accent); color: var(--accent);">Square</button>
+                    <button onclick="sendCommand('#FG:WAVE:SI')" style="border-color: var(--accent-cyan); color: var(--accent-cyan);">Sine</button>
+                    <button onclick="sendCommand('#FG:WAVE:TR')" style="border-color: var(--accent-purple); color: var(--accent-purple);">Triangle</button>
+                </div>
+                <div class="controls" style="margin-top: 10px;">
+                    <button onclick="sendCommand('#FG:FREQ 100')">100 Hz</button>
+                    <button onclick="sendCommand('#FG:FREQ 500')">500 Hz</button>
+                    <button onclick="sendCommand('#FG:FREQ 1000')">1 kHz</button>
+                    <button onclick="sendCommand('#FG:PULSE:H')">Pulse</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Multimeter Controls</h3>
+                <div class="controls">
+                    <button onclick="sendCommand('#MM:MODE V')">DC Voltage</button>
+                    <button onclick="sendCommand('#MM:MODE A')">DC Current</button>
+                    <button onclick="sendCommand('#MM:MODE R')">Resistance</button>
+                    <button onclick="sendCommand('#MM:MODE F')">Frequency</button>
+                    <button onclick="sendCommand('#MM:RANGE AUTO')">Auto Range</button>
+                    <button onclick="sendCommand('#MM:RANGE 5V')">5V Range</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Real-Time Statistics</h3>
+                <div style="color: var(--muted); font-size: 12px;">Mean Voltage</div>
+                <div class="stat-value" id="stat-mean" style="font-size: 24px;">0.000 V</div>
+                <div style="color: var(--muted); font-size: 12px;">Peak-to-Peak</div>
+                <div class="stat-value" id="stat-vpp" style="font-size: 24px; color: var(--accent);">0.000 V</div>
+                <div style="color: var(--muted); font-size: 12px;">Dominant Freq</div>
+                <div class="stat-value" id="stat-freq" style="font-size: 24px; color: #ffb86c;">0 Hz</div>
+            </div>
+            
+            <div class="card">
+                <h3>Communication Log</h3>
+                <div class="log-area" id="log-area"></div>
             </div>
         </div>
     </div>
@@ -184,6 +279,37 @@
 <script>
     let client = null;
     let base_topic = "";
+    const protocols = ["I2C", "SPI", "UART", "1-Wire", "CAN", "LIN", "PWM", "Manchester", "NRZ", 
+                     "Modbus", "Profibus", "Bluetooth", "USB", "Ethernet", "MIDI"];
+    
+    // Initialize protocol grid
+    function initProtocolGrid() {
+        const grid = document.getElementById('protocol-grid');
+        protocols.forEach(proto => {
+            const btn = document.createElement('button');
+            btn.className = 'protocol-btn';
+            btn.textContent = proto;
+            btn.onclick = () => selectProtocol(proto);
+            grid.appendChild(btn);
+        });
+    }
+    
+    function selectProtocol(proto) {
+        // Update active protocol display
+        document.getElementById('active-protocol').textContent = proto;
+        
+        // Update button states
+        document.querySelectorAll('.protocol-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.textContent === proto) {
+                btn.classList.add('active');
+            }
+        });
+        
+        // Send protocol selection command
+        addLogEntry(`Protocol set to: ${proto}`, 'tx');
+        sendCommand(`#PROTO:SELECT ${proto}`);
+    }
     
     // Initialize Chart
     const ctx = document.getElementById('dsoChart').getContext('2d');
@@ -223,6 +349,21 @@
         else ind.classList.remove("connected");
     }
 
+    function addLogEntry(message, type = 'rx') {
+        const logArea = document.getElementById('log-area');
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        const timestamp = new Date().toLocaleTimeString();
+        entry.textContent = `[${timestamp}] ${message}`;
+        logArea.appendChild(entry);
+        logArea.scrollTop = logArea.scrollHeight;
+        
+        // Keep only last 50 entries
+        while (logArea.children.length > 50) {
+            logArea.removeChild(logArea.firstChild);
+        }
+    }
+
     function connect_cloud() {
         const sid = document.getElementById("session-id").value.toUpperCase().trim();
         if (sid.length !== 6) {
@@ -232,6 +373,7 @@
         
         base_topic = `stm32lab/${sid}`;
         updateStatus(`Connecting to Mosquitto Cloud...`);
+        addLogEntry(`Connecting to session: ${sid}`, 'tx');
         
         // Connect to Eclipse Mosquitto Public web socket (WSS protocol 8081)
         client = mqtt.connect("wss://test.mosquitto.org:8081/mqtt");
@@ -240,14 +382,21 @@
             updateStatus(`Connected to Board [${sid}]`, true);
             document.getElementById("auth-panel").style.display = "none";
             document.getElementById("dashboard").style.display = "flex";
+            addLogEntry(`Successfully connected to STM32 Lab v6.0`, 'rx');
             
             // Subscribe to data
             client.subscribe(`${base_topic}/data`);
+            client.subscribe(`${base_topic}/logs`);
         });
 
         client.on("message", (topic, message) => {
             try {
                 const payload = JSON.parse(message.toString());
+                
+                if (topic.includes('/logs')) {
+                    addLogEntry(payload.message || message.toString(), payload.type || 'rx');
+                    return;
+                }
                 
                 // Update graph
                 if (payload.s && payload.s.length > 0) {
@@ -263,26 +412,33 @@
                 }
             } catch (e) {
                 console.error("Parse error", e);
+                addLogEntry(`Parse error: ${e.message}`, 'err');
             }
         });
 
         client.on("error", (err) => {
             updateStatus("Connection Error!", false);
+            addLogEntry(`Connection error: ${err.message}`, 'err');
             console.error(err);
         });
 
         client.on("close", () => {
             updateStatus("Disconnected", false);
+            addLogEntry("Disconnected from cloud relay", 'err');
         });
     }
 
     function sendCommand(cmd) {
         if (client && client.connected) {
             client.publish(`${base_topic}/cmds`, cmd);
+            addLogEntry(cmd, 'tx');
         } else {
             alert("Not connected to cloud relay.");
         }
     }
+    
+    // Initialize on load
+    initProtocolGrid();
 </script>
 
 </body>
