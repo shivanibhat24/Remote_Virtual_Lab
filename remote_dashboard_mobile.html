@@ -426,6 +426,9 @@
                     <span class="status-label">Session:</span>
                     <span class="status-value" id="session-id">--</span>
                 </div>
+                <div class="status-item">
+                    <button class="btn btn-primary" id="connect-btn" onclick="toggleConnection()">Connect</button>
+                </div>
             </div>
         </div>
 
@@ -650,6 +653,7 @@
         let isConnected = false;
         let currentTab = 'oscilloscope';
         let sessionId = 'mobile_' + Math.random().toString(36).substr(2, 9);
+        let brokerUrl = 'wss://test.mosquitto.org:8081/mqtt';  // WebSocket URL for better mobile compatibility
 
         // Chart instances
         let oscilloscopeChart;
@@ -685,13 +689,67 @@
                 onSuccess: function() {
                     isConnected = true;
                     updateConnectionStatus('Connected');
+                    updateConnectButton('Disconnect');
                     console.log('MQTT connected successfully');
                 },
                 onFailure: function(responseObject) {
                     console.error('MQTT connection failed:', responseObject.errorMessage);
                     updateConnectionStatus('Connection Failed');
-                }
+                },
+                useSSL: true,  // Use WebSocket for better mobile compatibility
+                cleanSession: true,
+                reconnectPeriod: 5,
+                timeout: 10,
+                keepAliveInterval: 60
             });
+        }
+
+        function toggleConnection() {
+            if (isConnected) {
+                disconnectMQTT();
+            } else {
+                connectMQTT();
+            }
+        }
+
+        function connectMQTT() {
+            if (!isConnected) {
+                client.connect({
+                    onSuccess: function() {
+                        isConnected = true;
+                        updateConnectionStatus('Connected');
+                        updateConnectButton('Disconnect');
+                        console.log('MQTT connected successfully');
+                    },
+                    onFailure: function(responseObject) {
+                        console.error('MQTT connection failed:', responseObject.errorMessage);
+                        updateConnectionStatus('Connection Failed');
+                        updateConnectButton('Connect');
+                    },
+                    useSSL: true,
+                    cleanSession: true,
+                    reconnectPeriod: 5,
+                    timeout: 10
+                });
+            }
+        }
+
+        function disconnectMQTT() {
+            if (isConnected && client) {
+                isConnected = false;
+                client.disconnect();
+                updateConnectionStatus('Disconnected');
+                updateConnectButton('Connect');
+                console.log('MQTT disconnected');
+            }
+        }
+
+        function updateConnectButton(text) {
+            const btn = document.getElementById('connect-btn');
+            if (btn) {
+                btn.textContent = text;
+                btn.className = text === 'Connect' ? 'btn btn-primary' : 'btn btn-danger';
+            }
         }
 
         function initializeCharts() {
