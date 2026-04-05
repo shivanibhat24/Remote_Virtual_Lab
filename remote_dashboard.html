@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STM32 Remote Laboratory v6.0</title>
+    <title>STM32 Remote Laboratory v6.0 - Advanced Interface</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* STM32 Lab GUI v6.0 Theme System */
+        /* Advanced CSS with stunning visuals and animations */
         :root {
             /* Dark Theme (Default) */
             --DARK_BG: #080c10;
@@ -27,9 +28,25 @@
             --TEXT_DIM: #2a3a4a;
             --FONT_UI: 'Inter', 'Segoe UI', Roboto, sans-serif;
             --FONT_MONO: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+            
+            /* Advanced gradients */
+            --GRADIENT_PRIMARY: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+            --GRADIENT_BLUE: linear-gradient(135deg, #00b4ff 0%, #0080cc 100%);
+            --GRADIENT_AMBER: linear-gradient(135deg, #ffaa00 0%, #ff8800 100%);
+            --GRADIENT_RED: linear-gradient(135deg, #ff3355 0%, #cc0022 100%);
+            --GRADIENT_PUR: linear-gradient(135deg, #aa55ff 0%, #8833cc 100%);
+            --GRADIENT_CYAN: linear-gradient(135deg, #00e5ff 0%, #00b3cc 100%);
+            
+            /* Glow effects */
+            --GLOW_PRIMARY: 0 0 20px rgba(0, 255, 136, 0.5);
+            --GLOW_BLUE: 0 0 20px rgba(0, 180, 255, 0.5);
+            --GLOW_AMBER: 0 0 20px rgba(255, 170, 0, 0.5);
+            --GLOW_RED: 0 0 20px rgba(255, 51, 85, 0.5);
+            --GLOW_PUR: 0 0 20px rgba(170, 85, 255, 0.5);
+            --GLOW_CYAN: 0 0 20px rgba(0, 229, 255, 0.5);
         }
 
-        /* Theme Variants */
+        /* Cyberpunk Theme */
         [data-theme="cyberpunk"] {
             --DARK_BG: #08010f;
             --PANEL_BG: #0f0520;
@@ -45,40 +62,63 @@
             --TEXT: #e0c8ff;
             --TEXT_MUTED: #5a3a7a;
             --TEXT_DIM: #2a1a3a;
+            
+            --GRADIENT_PRIMARY: linear-gradient(135deg, #00ffcc 0%, #00ccaa 100%);
+            --GRADIENT_BLUE: linear-gradient(135deg, #ff00ff 0%, #cc00cc 100%);
+            --GRADIENT_AMBER: linear-gradient(135deg, #ffee00 0%, #ccbb00 100%);
+            --GRADIENT_RED: linear-gradient(135deg, #ff0055 0%, #cc0033 100%);
+            --GRADIENT_PUR: linear-gradient(135deg, #cc44ff 0%, #9933cc 100%);
+            --GRADIENT_CYAN: linear-gradient(135deg, #00eeff 0%, #00bbcc 100%);
         }
 
-        [data-theme="high-contrast"] {
+        /* Matrix Theme */
+        [data-theme="matrix"] {
             --DARK_BG: #000000;
-            --PANEL_BG: #0a0a0a;
-            --CARD_BG: #111111;
-            --BORDER: #444444;
-            --BORDER_HI: #888888;
-            --PRIMARY: #ffffff;
-            --ACCENT_BLUE: #00aaff;
-            --ACCENT_AMBER: #ffcc00;
-            --ACCENT_RED: #ff2222;
-            --ACCENT_PUR: #cc88ff;
+            --PANEL_BG: #0a0f0a;
+            --CARD_BG: #0d1a0d;
+            --BORDER: #00ff00;
+            --BORDER_HI: #00cc00;
+            --PRIMARY: #00ff00;
+            --ACCENT_BLUE: #00ff88;
+            --ACCENT_AMBER: #88ff00;
+            --ACCENT_RED: #ff0000;
+            --ACCENT_PUR: #ff00ff;
+            --ACCENT_CYAN: #00ffff;
+            --TEXT: #00ff00;
+            --TEXT_MUTED: #00cc00;
+            --TEXT_DIM: #008800;
+            
+            --GRADIENT_PRIMARY: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+            --GRADIENT_BLUE: linear-gradient(135deg, #00ff88 0%, #00cc66 100%);
+            --GRADIENT_AMBER: linear-gradient(135deg, #88ff00 0%, #66cc00 100%);
+            --GRADIENT_RED: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+            --GRADIENT_PUR: linear-gradient(135deg, #ff00ff 0%, #cc00cc 100%);
+            --GRADIENT_CYAN: linear-gradient(135deg, #00ffff 0%, #00cccc 100%);
+        }
+
+        /* Neon Theme */
+        [data-theme="neon"] {
+            --DARK_BG: #0a0014;
+            --PANEL_BG: #1a0028;
+            --CARD_BG: #2a0038;
+            --BORDER: #ff00ff;
+            --BORDER_HI: #ff66ff;
+            --PRIMARY: #ff00ff;
+            --ACCENT_BLUE: #00ffff;
+            --ACCENT_AMBER: #ffff00;
+            --ACCENT_RED: #ff0066;
+            --ACCENT_PUR: #ff00ff;
             --ACCENT_CYAN: #00ffff;
             --TEXT: #ffffff;
-            --TEXT_MUTED: #aaaaaa;
-            --TEXT_DIM: #555555;
-        }
-
-        [data-theme="github-dimmed"] {
-            --DARK_BG: #22272e;
-            --PANEL_BG: #1c2128;
-            --CARD_BG: #2d333b;
-            --BORDER: #444c56;
-            --BORDER_HI: #545d68;
-            --PRIMARY: #539bf5;
-            --ACCENT_BLUE: #316dca;
-            --ACCENT_AMBER: #c69026;
-            --ACCENT_RED: #f47067;
-            --ACCENT_PUR: #b392f0;
-            --ACCENT_CYAN: #39c5bb;
-            --TEXT: #adbac7;
-            --TEXT_MUTED: #768390;
-            --TEXT_DIM: #545d68;
+            --TEXT_MUTED: #ff66ff;
+            --TEXT_DIM: #9933cc;
+            
+            --GRADIENT_PRIMARY: linear-gradient(135deg, #ff00ff 0%, #cc00cc 100%);
+            --GRADIENT_BLUE: linear-gradient(135deg, #00ffff 0%, #00cccc 100%);
+            --GRADIENT_AMBER: linear-gradient(135deg, #ffff00 0%, #cccc00 100%);
+            --GRADIENT_RED: linear-gradient(135deg, #ff0066 0%, #cc0044 100%);
+            --GRADIENT_PUR: linear-gradient(135deg, #ff00ff 0%, #cc00cc 100%);
+            --GRADIENT_CYAN: linear-gradient(135deg, #00ffff 0%, #00cccc 100%);
         }
 
         /* Base Styles */
@@ -97,162 +137,320 @@
             padding: 0;
             font-family: var(--FONT_UI);
             overflow-x: hidden;
+            position: relative;
         }
 
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 136, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 180, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(170, 85, 255, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Main Window */
         .main-window {
-            background: var(--DARK_BG);
+            background: rgba(var(--DARK_BG), 0.95);
+            backdrop-filter: blur(10px);
             height: 100vh;
             display: flex;
             flex-direction: column;
+            position: relative;
+            z-index: 1;
         }
 
-        /* Header */
+        /* Animated Header */
         .header {
-            background: var(--PANEL_BG);
-            border-bottom: 1px solid var(--BORDER);
-            padding: 12px 20px;
+            background: linear-gradient(135deg, var(--PANEL_BG) 0%, rgba(var(--CARD_BG), 0.8) 100%);
+            border-bottom: 2px solid var(--BORDER);
+            padding: 15px 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(var(--PRIMARY), 0.3), transparent);
+            animation: slideHeader 3s infinite;
+        }
+
+        @keyframes slideHeader {
+            0% { left: -100%; }
+            100% { left: 100%; }
         }
 
         .app-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--PRIMARY);
-            font-family: var(--FONT_UI);
+            font-size: 20px;
+            font-weight: 800;
+            background: var(--GRADIENT_PRIMARY);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: var(--GLOW_PRIMARY);
+            position: relative;
+            z-index: 2;
         }
 
         .header-controls {
             display: flex;
-            gap: 10px;
+            gap: 15px;
             align-items: center;
+            position: relative;
+            z-index: 2;
         }
 
-        /* Status Bar */
+        /* Advanced Status Bar */
         .status-bar {
-            background: var(--CARD_BG);
-            border-top: 1px solid var(--BORDER);
-            padding: 8px 20px;
+            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
+            border-top: 2px solid var(--BORDER);
+            padding: 10px 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 11px;
             color: var(--TEXT_MUTED);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-bar::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--GRADIENT_PRIMARY);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
         }
 
         .status-indicator {
             display: inline-block;
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background-color: var(--ACCENT_RED);
-            margin-right: 6px;
+            background: var(--ACCENT_RED);
+            margin-right: 8px;
+            position: relative;
+            animation: pulseIndicator 2s infinite;
         }
 
         .status-indicator.connected {
-            background-color: var(--PRIMARY);
+            background: var(--PRIMARY);
+            box-shadow: var(--GLOW_PRIMARY);
         }
 
-        /* Tab System */
+        @keyframes pulseIndicator {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+        }
+
+        /* Advanced Tab System */
         .tab-container {
             flex: 1;
             display: flex;
             flex-direction: column;
+            position: relative;
         }
 
         .tab-bar {
-            background: var(--DARK_BG);
-            border-bottom: 1px solid var(--BORDER);
+            background: linear-gradient(135deg, var(--DARK_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
+            border-bottom: 2px solid var(--BORDER);
             display: flex;
-            padding: 0 20px;
+            padding: 0 25px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab-bar::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--GRADIENT_PRIMARY);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
         }
 
         .tab {
-            background: var(--DARK_BG);
+            background: transparent;
             color: var(--TEXT_MUTED);
-            border: 1px solid var(--BORDER);
-            border-bottom: none;
-            padding: 8px 16px;
-            margin-right: 2px;
-            font-size: 11px;
-            font-weight: 700;
-            min-width: 90px;
+            border: none;
+            padding: 12px 20px;
+            margin-right: 5px;
+            font-size: 12px;
+            font-weight: 600;
             cursor: pointer;
-            border-radius: 3px 3px 0 0;
-            transition: all 0.2s;
+            position: relative;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            overflow: hidden;
         }
 
-        .tab:hover:not(.active) {
+        .tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(var(--PRIMARY), 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .tab:hover::before {
+            left: 100%;
+        }
+
+        .tab:hover {
             color: var(--TEXT);
-            background: var(--CARD_BG);
+            transform: translateY(-2px);
         }
 
         .tab.active {
-            background: var(--PANEL_BG);
-            color: var(--PRIMARY);
-            border-top: 2px solid var(--PRIMARY);
-            border-bottom: 1px solid var(--PANEL_BG);
+            background: var(--GRADIENT_PRIMARY);
+            color: var(--DARK_BG);
+            font-weight: 700;
+            box-shadow: var(--GLOW_PRIMARY);
+            transform: translateY(-2px);
         }
 
         .tab-content {
             flex: 1;
-            background: var(--DARK_BG);
-            padding: 20px;
+            background: rgba(var(--DARK_BG), 0.9);
+            padding: 25px;
             overflow-y: auto;
             display: none;
+            position: relative;
         }
 
         .tab-content.active {
             display: block;
+            animation: fadeIn 0.5s ease;
         }
 
-        /* Card Components */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Advanced Cards */
         .card {
-            background: var(--CARD_BG);
+            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
             border: 1px solid var(--BORDER);
-            border-radius: 3px;
-            padding: 15px;
-            margin-bottom: 15px;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--GRADIENT_PRIMARY);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.2);
+            border-color: var(--PRIMARY);
         }
 
         .card-title {
             font-size: 14px;
-            font-weight: 600;
-            color: var(--TEXT_MUTED);
+            font-weight: 700;
+            background: var(--GRADIENT_BLUE);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            position: relative;
         }
 
-        /* Buttons */
+        /* Advanced Buttons */
         .btn {
             background: transparent;
             color: var(--PRIMARY);
-            border: 1px solid var(--PRIMARY);
-            border-radius: 3px;
-            padding: 8px 20px;
-            font-size: 11px;
-            font-weight: 700;
+            border: 2px solid var(--PRIMARY);
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 12px;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s ease;
             font-family: var(--FONT_UI);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: var(--PRIMARY);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s ease, height 0.3s ease;
+        }
+
+        .btn:hover::before {
+            width: 100%;
+            height: 100%;
         }
 
         .btn:hover {
             background: var(--PRIMARY);
             color: var(--DARK_BG);
+            transform: translateY(-2px);
+            box-shadow: var(--GLOW_PRIMARY);
         }
 
         .btn:active {
-            background: var(--ACCENT_BLUE);
-            color: var(--DARK_BG);
-        }
-
-        .btn:disabled {
-            color: var(--TEXT_DIM);
-            border-color: var(--TEXT_DIM);
-            cursor: not-allowed;
+            transform: translateY(0);
         }
 
         .btn-blue {
@@ -263,6 +461,7 @@
         .btn-blue:hover {
             background: var(--ACCENT_BLUE);
             color: var(--DARK_BG);
+            box-shadow: var(--GLOW_BLUE);
         }
 
         .btn-red {
@@ -273,6 +472,7 @@
         .btn-red:hover {
             background: var(--ACCENT_RED);
             color: var(--DARK_BG);
+            box-shadow: var(--GLOW_RED);
         }
 
         .btn-amber {
@@ -283,6 +483,7 @@
         .btn-amber:hover {
             background: var(--ACCENT_AMBER);
             color: var(--DARK_BG);
+            box-shadow: var(--GLOW_AMBER);
         }
 
         .btn-purple {
@@ -293,41 +494,62 @@
         .btn-purple:hover {
             background: var(--ACCENT_PUR);
             color: var(--DARK_BG);
+            box-shadow: var(--GLOW_PUR);
         }
 
-        /* Form Controls */
+        .btn-cyan {
+            color: var(--ACCENT_CYAN);
+            border-color: var(--ACCENT_CYAN);
+        }
+
+        .btn-cyan:hover {
+            background: var(--ACCENT_CYAN);
+            color: var(--DARK_BG);
+            box-shadow: var(--GLOW_CYAN);
+        }
+
+        /* Advanced Form Controls */
         .input, .select {
-            background: var(--CARD_BG);
+            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
             color: var(--TEXT);
-            border: 1px solid var(--BORDER);
-            border-radius: 3px;
-            padding: 6px 10px;
+            border: 2px solid var(--BORDER);
+            border-radius: 8px;
+            padding: 10px 15px;
             font-size: 14px;
-            min-height: 28px;
+            min-height: 35px;
             font-family: var(--FONT_UI);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
         }
 
         .input:focus, .select:focus {
-            border-color: var(--ACCENT_BLUE);
-            outline: none;
+            border-color: var(--PRIMARY);
+            box-shadow: var(--GLOW_PRIMARY);
+            transform: translateY(-2px);
         }
 
-        /* Grid Layouts */
+        /* Advanced Grid Layouts */
         .grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            gap: 20px;
         }
 
         .grid-3 {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
+            gap: 15px;
         }
 
         .grid-4 {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .grid-5 {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
             gap: 10px;
         }
 
@@ -347,6 +569,10 @@
             gap: 15px;
         }
 
+        .gap-20 {
+            gap: 20px;
+        }
+
         .items-center {
             align-items: center;
         }
@@ -355,177 +581,370 @@
             justify-content: space-between;
         }
 
-        /* Charts */
-        .chart-container {
-            background: var(--CARD_BG);
-            border: 1px solid var(--BORDER);
-            border-radius: 3px;
-            padding: 15px;
-            margin-bottom: 15px;
-            height: 400px;
-            position: relative;
+        .justify-center {
+            justify-content: center;
         }
 
-        /* Protocol Grid */
+        /* Advanced Charts */
+        .chart-container {
+            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
+            border: 2px solid var(--BORDER);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            height: 450px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .chart-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--GRADIENT_PRIMARY);
+            animation: chartGlow 2s infinite;
+        }
+
+        @keyframes chartGlow {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Advanced Protocol Grid */
         .protocol-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
-            margin-top: 10px;
+            gap: 10px;
+            margin-top: 15px;
         }
 
         .protocol-btn {
-            background: var(--CARD_BG);
-            border: 1px solid var(--BORDER);
+            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
+            border: 2px solid var(--BORDER);
             color: var(--TEXT_MUTED);
             font-size: 11px;
-            padding: 6px;
-            border-radius: 3px;
+            padding: 8px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s ease;
             font-family: var(--FONT_UI);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .protocol-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: var(--PRIMARY);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s ease, height 0.3s ease;
+        }
+
+        .protocol-btn:hover::before {
+            width: 100%;
+            height: 100%;
         }
 
         .protocol-btn:hover {
-            background: var(--BORDER_HI);
-            color: var(--TEXT);
-        }
-
-        .protocol-btn.active {
-            background: var(--PRIMARY);
+            background: var(--GRADIENT_PRIMARY);
             color: var(--DARK_BG);
+            transform: translateY(-3px);
+            box-shadow: var(--GLOW_PRIMARY);
             border-color: var(--PRIMARY);
         }
 
-        /* Log Area */
+        .protocol-btn.active {
+            background: var(--GRADIENT_PRIMARY);
+            color: var(--DARK_BG);
+            border-color: var(--PRIMARY);
+            box-shadow: var(--GLOW_PRIMARY);
+            transform: translateY(-3px);
+        }
+
+        /* Advanced Log Area */
         .log-area {
-            background: var(--DARK_BG);
-            border: 1px solid var(--BORDER);
-            border-radius: 3px;
-            padding: 10px;
-            height: 150px;
+            background: linear-gradient(135deg, var(--DARK_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
+            border: 2px solid var(--BORDER);
+            border-radius: 8px;
+            padding: 15px;
+            height: 180px;
             overflow-y: auto;
             font-family: var(--FONT_MONO);
             font-size: 11px;
             color: var(--TEXT_MUTED);
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .log-area::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .log-area::-webkit-scrollbar-track {
+            background: var(--CARD_BG);
+        }
+
+        .log-area::-webkit-scrollbar-thumb {
+            background: var(--PRIMARY);
+            border-radius: 4px;
         }
 
         .log-entry {
-            margin-bottom: 4px;
-            line-height: 1.3;
+            margin-bottom: 6px;
+            line-height: 1.4;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .log-entry:hover {
+            background: rgba(var(--PRIMARY), 0.1);
         }
 
         .log-entry.tx {
             color: var(--ACCENT_BLUE);
+            border-left: 3px solid var(--ACCENT_BLUE);
         }
 
         .log-entry.rx {
             color: var(--PRIMARY);
+            border-left: 3px solid var(--PRIMARY);
         }
 
         .log-entry.err {
             color: var(--ACCENT_RED);
+            border-left: 3px solid var(--ACCENT_RED);
         }
 
         .log-entry.info {
             color: var(--ACCENT_AMBER);
+            border-left: 3px solid var(--ACCENT_AMBER);
         }
 
-        /* Notes Section */
+        /* Advanced Notes Section */
         .notes-area {
-            background: var(--CARD_BG);
-            border: 1px solid var(--BORDER);
-            border-radius: 3px;
-            padding: 10px;
-            min-height: 120px;
+            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
+            border: 2px solid var(--BORDER);
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 150px;
             font-family: var(--FONT_UI);
             font-size: 13px;
             color: var(--TEXT);
             resize: vertical;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .notes-area:focus {
+            border-color: var(--PRIMARY);
+            box-shadow: var(--GLOW_PRIMARY);
+            transform: translateY(-2px);
         }
 
         .notes-controls {
-            margin-top: 10px;
+            margin-top: 15px;
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
-        /* Statistics Display */
+        /* Advanced Statistics Display */
         .stat-display {
-            background: var(--CARD_BG);
-            border: 1px solid var(--BORDER);
-            border-radius: 3px;
-            padding: 15px;
+            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.8) 100%);
+            border: 2px solid var(--BORDER);
+            border-radius: 12px;
+            padding: 20px;
             text-align: center;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .stat-display::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--GRADIENT_PRIMARY);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-display:hover::before {
+            transform: scaleX(1);
+        }
+
+        .stat-display:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.2);
         }
 
         .stat-label {
             font-size: 11px;
             color: var(--TEXT_MUTED);
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 5px;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            font-weight: 600;
         }
 
         .stat-value {
-            font-size: 24px;
-            font-weight: 600;
+            font-size: 28px;
+            font-weight: 700;
             font-family: var(--FONT_MONO);
-            color: var(--PRIMARY);
+            background: var(--GRADIENT_PRIMARY);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: var(--GLOW_PRIMARY);
+            transition: all 0.3s ease;
         }
 
         .stat-value.accent {
-            color: var(--ACCENT_BLUE);
+            background: var(--GRADIENT_BLUE);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: var(--GLOW_BLUE);
         }
 
         .stat-value.amber {
-            color: var(--ACCENT_AMBER);
+            background: var(--GRADIENT_AMBER);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: var(--GLOW_AMBER);
         }
 
-        /* Connection Panel */
+        /* Advanced Connection Panel */
         .auth-panel {
-            background: var(--CARD_BG);
-            border: 1px solid var(--BORDER);
-            border-radius: 3px;
-            padding: 20px;
+            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.9) 100%);
+            border: 2px solid var(--BORDER);
+            border-radius: 16px;
+            padding: 30px;
             text-align: center;
-            max-width: 400px;
+            max-width: 450px;
             margin: 50px auto;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .auth-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--GRADIENT_PRIMARY);
+            opacity: 0.1;
+            animation: rotateGradient 10s linear infinite;
+        }
+
+        @keyframes rotateGradient {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .auth-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--PRIMARY);
-            margin-bottom: 15px;
+            font-size: 24px;
+            font-weight: 800;
+            background: var(--GRADIENT_PRIMARY);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 2;
         }
 
         .auth-input {
-            width: 200px;
+            width: 250px;
             text-align: center;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 15px;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            font-weight: 600;
+            position: relative;
+            z-index: 2;
         }
 
-        /* Theme Selector */
+        /* Advanced Theme Selector */
         .theme-selector {
-            position: absolute;
-            top: 12px;
+            position: fixed;
+            top: 20px;
             right: 20px;
             z-index: 1000;
+            background: linear-gradient(135deg, var(--CARD_BG) 0%, rgba(var(--PANEL_BG), 0.9) 100%);
+            border: 2px solid var(--BORDER);
+            border-radius: 12px;
+            padding: 10px;
+            backdrop-filter: blur(10px);
         }
 
         .theme-select {
             background: var(--CARD_BG);
-            border: 1px solid var(--BORDER);
+            border: 2px solid var(--BORDER);
             color: var(--TEXT);
-            padding: 4px 8px;
-            font-size: 11px;
-            border-radius: 3px;
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
-        /* Responsive */
+        .theme-select:hover {
+            border-color: var(--PRIMARY);
+            box-shadow: var(--GLOW_PRIMARY);
+        }
+
+        /* Advanced Floating Elements */
+        .floating-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--PRIMARY);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float 10s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); }
+            100% { transform: translateY(-100px) rotate(360deg); }
+        }
+
+        /* Advanced Responsive Design */
         @media (max-width: 768px) {
             .grid-4 {
                 grid-template-columns: 1fr 1fr;
@@ -537,23 +956,77 @@
             
             .header-controls {
                 flex-direction: column;
-                gap: 5px;
+                gap: 10px;
             }
+            
+            .app-title {
+                font-size: 16px;
+            }
+            
+            .tab {
+                padding: 8px 12px;
+                font-size: 10px;
+            }
+            
+            .stat-value {
+                font-size: 20px;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--BORDER);
+            border-top: 3px solid var(--PRIMARY);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Pulse Animation */
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        /* Glow Animation */
+        .glow {
+            box-shadow: var(--GLOW_PRIMARY);
+        }
+
+        /* Shake Animation */
+        .shake {
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
         }
     </style>
 </head>
 <body data-theme="dark">
+    <!-- Floating Particles -->
+    <div class="floating-particles" id="particles"></div>
+
+    <!-- Theme Selector -->
     <div class="theme-selector">
         <select class="theme-select" onchange="changeTheme(this.value)">
             <option value="dark">Dark</option>
             <option value="cyberpunk">Cyberpunk</option>
-            <option value="high-contrast">High Contrast</option>
-            <option value="github-dimmed">GitHub Dimmed</option>
+            <option value="matrix">Matrix</option>
+            <option value="neon">Neon</option>
         </select>
     </div>
 
     <div class="main-window">
-        <!-- Header -->
+        <!-- Animated Header -->
         <div class="header">
             <div class="app-title">STM32 Remote Laboratory v6.0</div>
             <div class="header-controls">
@@ -565,26 +1038,30 @@
             </div>
         </div>
 
-        <!-- Connection Panel (Hidden by default) -->
+        <!-- Connection Panel -->
         <div class="auth-panel" id="auth-panel" style="display: none;">
-            <div class="auth-title">Remote Connection</div>
-            <p style="color: var(--TEXT_MUTED); margin-bottom: 20px;">Enter 6-character Session ID from Host GUI</p>
+            <div class="auth-title">🚀 Remote Connection Portal</div>
+            <p style="color: var(--TEXT_MUTED); margin-bottom: 25px;">Enter 6-character Session ID from Host GUI</p>
             <input type="text" class="input auth-input" id="session-id" placeholder="X9T4K2" maxlength="6">
             <br>
-            <button class="btn" onclick="connect_cloud()">Connect to Cloud</button>
-            <button class="btn btn-red" onclick="hideAuthPanel()" style="margin-left: 10px;">Cancel</button>
+            <div class="flex gap-15 justify-center">
+                <button class="btn" onclick="connect_cloud()">🔗 Connect to Cloud</button>
+                <button class="btn btn-red" onclick="hideAuthPanel()">❌ Cancel</button>
+            </div>
         </div>
 
         <!-- Tab Container -->
         <div class="tab-container">
             <!-- Tab Bar -->
             <div class="tab-bar">
-                <div class="tab active" onclick="switchTab('oscilloscope')">Oscilloscope</div>
-                <div class="tab" onclick="switchTab('multimeter')">Multimeter</div>
-                <div class="tab" onclick="switchTab('function-gen')">Function Gen</div>
-                <div class="tab" onclick="switchTab('protocol')">Protocol</div>
-                <div class="tab" onclick="switchTab('pid')">PID Control</div>
-                <div class="tab" onclick="switchTab('notes')">Notes</div>
+                <div class="tab active" onclick="switchTab('oscilloscope')">📊 Oscilloscope</div>
+                <div class="tab" onclick="switchTab('multimeter')">⚡ Multimeter</div>
+                <div class="tab" onclick="switchTab('function-gen')">🎵 Function Gen</div>
+                <div class="tab" onclick="switchTab('protocol')">🔌 Protocol</div>
+                <div class="tab" onclick="switchTab('pid')">🎛️ PID Control</div>
+                <div class="tab" onclick="switchTab('notes')">📝 Notes</div>
+                <div class="tab" onclick="switchTab('advanced')">⚙️ Advanced</div>
+                <div class="tab" onclick="switchTab('analytics')">📈 Analytics</div>
             </div>
 
             <!-- Tab Contents -->
@@ -606,6 +1083,19 @@
                         <div class="stat-value amber" id="stat-freq">0 Hz</div>
                     </div>
                 </div>
+                <div class="card">
+                    <div class="card-title">Advanced Oscilloscope Controls</div>
+                    <div class="grid-4">
+                        <button class="btn btn-blue" onclick="sendCommand('#DSO:TRIG AUTO')">Auto Trigger</button>
+                        <button class="btn btn-purple" onclick="sendCommand('#DSO:TRIG NORM')">Normal Trigger</button>
+                        <button class="btn btn-amber" onclick="sendCommand('#DSO:TRIG SINGLE')">Single Trigger</button>
+                        <button class="btn btn-cyan" onclick="sendCommand('#DSO:TRIG FORCE')">Force Trigger</button>
+                        <button class="btn" onclick="sendCommand('#DSO:TIME 1ms')">1ms/div</button>
+                        <button class="btn" onclick="sendCommand('#DSO:TIME 10ms')">10ms/div</button>
+                        <button class="btn" onclick="sendCommand('#DSO:TIME 100ms')">100ms/div</button>
+                        <button class="btn" onclick="sendCommand('#DSO:TIME 1s')">1s/div</button>
+                    </div>
+                </div>
             </div>
 
             <div id="multimeter" class="tab-content">
@@ -613,26 +1103,36 @@
                     <div class="card">
                         <div class="card-title">Measurement Mode</div>
                         <div class="grid-2">
-                            <button class="btn" onclick="sendCommand('#MM:MODE V')">DC Voltage</button>
-                            <button class="btn" onclick="sendCommand('#MM:MODE A')">DC Current</button>
-                            <button class="btn" onclick="sendCommand('#MM:MODE R')">Resistance</button>
-                            <button class="btn" onclick="sendCommand('#MM:MODE F')">Frequency</button>
+                            <button class="btn" onclick="sendCommand('#MM:MODE V')">⚡ DC Voltage</button>
+                            <button class="btn" onclick="sendCommand('#MM:MODE A')">🔌 DC Current</button>
+                            <button class="btn" onclick="sendCommand('#MM:MODE R')">📏 Resistance</button>
+                            <button class="btn" onclick="sendCommand('#MM:MODE F')">📊 Frequency</button>
+                            <button class="btn btn-blue" onclick="sendCommand('#MM:MODE AC')">🌊 AC Voltage</button>
+                            <button class="btn btn-purple" onclick="sendCommand('#MM:MODE CAP')">🔋 Capacitance</button>
                         </div>
                     </div>
                     <div class="card">
                         <div class="card-title">Range Control</div>
                         <div class="grid-2">
-                            <button class="btn" onclick="sendCommand('#MM:RANGE AUTO')">Auto Range</button>
+                            <button class="btn" onclick="sendCommand('#MM:RANGE AUTO')">🔄 Auto Range</button>
                             <button class="btn" onclick="sendCommand('#MM:RANGE 5V')">5V Range</button>
                             <button class="btn" onclick="sendCommand('#MM:RANGE 12V')">12V Range</button>
                             <button class="btn" onclick="sendCommand('#MM:RANGE 24V')">24V Range</button>
+                            <button class="btn btn-amber" onclick="sendCommand('#MM:RANGE 50V')">50V Range</button>
+                            <button class="btn btn-red" onclick="sendCommand('#MM:RANGE 100V')">100V Range</button>
                         </div>
                     </div>
                 </div>
                 <div class="card">
                     <div class="card-title">Current Reading</div>
                     <div class="stat-display">
-                        <div class="stat-value" id="mm-reading" style="font-size: 32px;">0.000 V</div>
+                        <div class="stat-value" id="mm-reading" style="font-size: 36px;">0.000 V</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Measurement History</div>
+                    <div id="mm-history" style="font-family: var(--FONT_MONO); font-size: 12px; color: var(--TEXT_MUTED); max-height: 150px; overflow-y: auto;">
+                        No measurements yet...
                     </div>
                 </div>
             </div>
@@ -642,35 +1142,60 @@
                     <div class="card">
                         <div class="card-title">Waveform Type</div>
                         <div class="grid-3">
-                            <button class="btn btn-blue" onclick="sendCommand('#FG:WAVE:SQ')">Square</button>
-                            <button class="btn btn-purple" onclick="sendCommand('#FG:WAVE:SI')">Sine</button>
-                            <button class="btn btn-amber" onclick="sendCommand('#FG:WAVE:TR')">Triangle</button>
+                            <button class="btn btn-blue" onclick="sendCommand('#FG:WAVE:SQ')">📦 Square</button>
+                            <button class="btn btn-purple" onclick="sendCommand('#FG:WAVE:SI')">〰️ Sine</button>
+                            <button class="btn btn-amber" onclick="sendCommand('#FG:WAVE:TR')">📐 Triangle</button>
+                            <button class="btn btn-cyan" onclick="sendCommand('#FG:WAVE:SAW')">📈 Sawtooth</button>
+                            <button class="btn" onclick="sendCommand('#FG:WAVE:NOISE')">🔊 Noise</button>
+                            <button class="btn" onclick="sendCommand('#FG:WAVE:DC')">➡️ DC</button>
                         </div>
                     </div>
                     <div class="card">
                         <div class="card-title">Frequency Control</div>
                         <div class="grid-2">
+                            <button class="btn" onclick="sendCommand('#FG:FREQ 10')">10 Hz</button>
                             <button class="btn" onclick="sendCommand('#FG:FREQ 100')">100 Hz</button>
                             <button class="btn" onclick="sendCommand('#FG:FREQ 500')">500 Hz</button>
                             <button class="btn" onclick="sendCommand('#FG:FREQ 1000')">1 kHz</button>
-                            <button class="btn" onclick="sendCommand('#FG:PULSE:H')">Pulse</button>
+                            <button class="btn btn-blue" onclick="sendCommand('#FG:FREQ 5000')">5 kHz</button>
+                            <button class="btn btn-purple" onclick="sendCommand('#FG:FREQ 10000')">10 kHz</button>
                         </div>
                     </div>
                 </div>
-                <div class="card">
-                    <div class="card-title">Function Generator Status</div>
-                    <div class="grid-3">
-                        <div class="stat-display">
-                            <div class="stat-label">Waveform</div>
-                            <div class="stat-value" id="fg-wave" style="font-size: 18px;">Square</div>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">Amplitude & Offset</div>
+                        <div class="grid-2 gap-15">
+                            <div>
+                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Amplitude (V)</label>
+                                <input type="number" class="input" id="fg-amplitude" value="3.3" step="0.1" min="0" max="5">
+                            </div>
+                            <div>
+                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Offset (V)</label>
+                                <input type="number" class="input" id="fg-offset" value="0" step="0.1" min="-2.5" max="2.5">
+                            </div>
                         </div>
-                        <div class="stat-display">
-                            <div class="stat-label">Frequency</div>
-                            <div class="stat-value accent" id="fg-freq" style="font-size: 18px;">1000 Hz</div>
+                        <div class="flex gap-10" style="margin-top: 15px;">
+                            <button class="btn btn-amber" onclick="updateFGParams()">⚙️ Update</button>
+                            <button class="btn btn-cyan" onclick="sendCommand('#FG:OUTPUT ON')">▶️ Output ON</button>
+                            <button class="btn btn-red" onclick="sendCommand('#FG:OUTPUT OFF')">⏹️ Output OFF</button>
                         </div>
-                        <div class="stat-display">
-                            <div class="stat-label">Amplitude</div>
-                            <div class="stat-value amber" id="fg-amp" style="font-size: 18px;">3.3V</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Function Generator Status</div>
+                        <div class="grid-3">
+                            <div class="stat-display">
+                                <div class="stat-label">Waveform</div>
+                                <div class="stat-value" id="fg-wave" style="font-size: 18px;">Square</div>
+                            </div>
+                            <div class="stat-display">
+                                <div class="stat-label">Frequency</div>
+                                <div class="stat-value accent" id="fg-freq" style="font-size: 18px;">1000 Hz</div>
+                            </div>
+                            <div class="stat-display">
+                                <div class="stat-label">Amplitude</div>
+                                <div class="stat-value amber" id="fg-amp" style="font-size: 18px;">3.3V</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -682,15 +1207,30 @@
                     <div class="protocol-grid" id="protocol-grid">
                         <!-- Protocol buttons will be added here -->
                     </div>
-                    <div style="margin-top: 15px;">
-                        <div style="color: var(--TEXT_MUTED); font-size: 11px;">Active Protocol:</div>
-                        <div id="active-protocol" style="color: var(--PRIMARY); font-weight: 600; font-size: 14px;">None</div>
+                    <div style="margin-top: 20px;">
+                        <div style="color: var(--TEXT_MUTED); font-size: 12px; margin-bottom: 10px;">Active Protocol:</div>
+                        <div id="active-protocol" style="color: var(--PRIMARY); font-weight: 600; font-size: 16px;">None</div>
                     </div>
                 </div>
-                <div class="card">
-                    <div class="card-title">Protocol Decoder Results</div>
-                    <div id="protocol-results" style="font-family: var(--FONT_MONO); font-size: 11px; color: var(--TEXT_MUTED);">
-                        No protocol data received yet...
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">Protocol Decoder Results</div>
+                        <div id="protocol-results" style="font-family: var(--FONT_MONO); font-size: 11px; color: var(--TEXT_MUTED); max-height: 300px; overflow-y: auto;">
+                            No protocol data received yet...
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Protocol Statistics</div>
+                        <div class="grid-2">
+                            <div class="stat-display">
+                                <div class="stat-label">Packets Found</div>
+                                <div class="stat-value" id="proto-packets" style="font-size: 20px;">0</div>
+                            </div>
+                            <div class="stat-display">
+                                <div class="stat-label">Error Rate</div>
+                                <div class="stat-value accent" id="proto-errors" style="font-size: 20px;">0%</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -699,71 +1239,216 @@
                 <div class="grid-2">
                     <div class="card">
                         <div class="card-title">PID Parameters</div>
-                        <div class="grid-2 gap-10">
+                        <div class="grid-2 gap-15">
                             <div>
-                                <label style="color: var(--TEXT_MUTED); font-size: 11px;">Kp</label>
+                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Kp (Proportional)</label>
                                 <input type="number" class="input" id="pid-kp" value="1.0" step="0.1">
                             </div>
                             <div>
-                                <label style="color: var(--TEXT_MUTED); font-size: 11px;">Ki</label>
+                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Ki (Integral)</label>
                                 <input type="number" class="input" id="pid-ki" value="0.1" step="0.01">
                             </div>
                             <div>
-                                <label style="color: var(--TEXT_MUTED); font-size: 11px;">Kd</label>
+                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Kd (Derivative)</label>
                                 <input type="number" class="input" id="pid-kd" value="0.05" step="0.01">
                             </div>
                             <div>
-                                <label style="color: var(--TEXT_MUTED); font-size: 11px;">Setpoint</label>
+                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Setpoint</label>
                                 <input type="number" class="input" id="pid-setpoint" value="2.5" step="0.1">
                             </div>
                         </div>
-                        <div class="flex gap-10" style="margin-top: 15px;">
-                            <button class="btn btn-purple" onclick="sendPIDParams()">Update PID</button>
-                            <button class="btn btn-amber" onclick="sendCommand('#PID:START')">Start</button>
-                            <button class="btn btn-red" onclick="sendCommand('#PID:STOP')">Stop</button>
+                        <div class="flex gap-10" style="margin-top: 20px;">
+                            <button class="btn btn-purple" onclick="sendPIDParams()">⚙️ Update PID</button>
+                            <button class="btn btn-amber" onclick="sendCommand('#PID:START')">▶️ Start</button>
+                            <button class="btn btn-red" onclick="sendCommand('#PID:STOP')">⏹️ Stop</button>
+                            <button class="btn btn-blue" onclick="sendCommand('#PID:RESET')">🔄 Reset</button>
                         </div>
                     </div>
                     <div class="card">
                         <div class="card-title">PID Control Status</div>
-                        <div class="stat-display">
-                            <div class="stat-label">Output</div>
-                            <div class="stat-value" id="pid-output" style="font-size: 24px;">0.000</div>
+                        <div class="grid-2">
+                            <div class="stat-display">
+                                <div class="stat-label">Output</div>
+                                <div class="stat-value" id="pid-output" style="font-size: 24px;">0.000</div>
+                            </div>
+                            <div class="stat-display">
+                                <div class="stat-label">Error</div>
+                                <div class="stat-value accent" id="pid-error" style="font-size: 18px;">0.000</div>
+                            </div>
                         </div>
-                        <div class="stat-display">
-                            <div class="stat-label">Error</div>
-                            <div class="stat-value accent" id="pid-error" style="font-size: 18px;">0.000</div>
+                        <div class="card" style="margin-top: 15px;">
+                            <div class="card-title">PID Performance</div>
+                            <div class="grid-3">
+                                <div class="stat-display">
+                                    <div class="stat-label">Rise Time</div>
+                                    <div class="stat-value amber" id="pid-rise" style="font-size: 16px;">0.0s</div>
+                                </div>
+                                <div class="stat-display">
+                                    <div class="stat-label">Overshoot</div>
+                                    <div class="stat-value" id="pid-overshoot" style="font-size: 16px;">0%</div>
+                                </div>
+                                <div class="stat-display">
+                                    <div class="stat-label">Steady State</div>
+                                    <div class="stat-value" id="pid-steady" style="font-size: 16px;">0.0</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div id="notes" class="tab-content">
-                <div class="card">
-                    <div class="card-title">Experiment Notes</div>
-                    <textarea class="notes-area" id="notes-area" placeholder="Enter your experiment notes here..."></textarea>
-                    <div class="notes-controls">
-                        <button class="btn" onclick="saveNotes()">Save Notes</button>
-                        <button class="btn btn-blue" onclick="shareNotes()">Share Notes</button>
-                        <button class="btn btn-amber" onclick="loadNotes()">Load Notes</button>
-                        <button class="btn btn-red" onclick="clearNotes()">Clear</button>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">📝 Experiment Notes</div>
+                        <textarea class="notes-area" id="notes-area" placeholder="Enter your experiment notes here..."></textarea>
+                        <div class="notes-controls">
+                            <button class="btn" onclick="saveNotes()">💾 Save</button>
+                            <button class="btn btn-blue" onclick="shareNotes()">🌐 Share</button>
+                            <button class="btn btn-amber" onclick="loadNotes()">📂 Load</button>
+                            <button class="btn btn-purple" onclick="exportNotes()">📤 Export</button>
+                            <button class="btn btn-red" onclick="clearNotes()">🗑️ Clear</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">🌐 Shared Notes</div>
+                        <div id="shared-notes" style="max-height: 300px; overflow-y: auto; font-family: var(--FONT_MONO); font-size: 12px; color: var(--TEXT_MUTED);">
+                            No shared notes available...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="advanced" class="tab-content">
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">🔧 System Configuration</div>
+                        <div class="grid-2 gap-15">
+                            <div>
+                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Sample Rate</label>
+                                <select class="select" id="sample-rate">
+                                    <option value="1000">1 kHz</option>
+                                    <option value="10000" selected>10 kHz</option>
+                                    <option value="100000">100 kHz</option>
+                                    <option value="1000000">1 MHz</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Buffer Size</label>
+                                <select class="select" id="buffer-size">
+                                    <option value="256">256</option>
+                                    <option value="512" selected>512</option>
+                                    <option value="1024">1024</option>
+                                    <option value="2048">2048</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Trigger Level</label>
+                                <input type="number" class="input" id="trigger-level" value="2.5" step="0.1" min="0" max="5">
+                            </div>
+                            <div>
+                                <label style="color: var(--TEXT_MUTED); font-size: 11px; display: block; margin-bottom: 5px;">Trigger Edge</label>
+                                <select class="select" id="trigger-edge">
+                                    <option value="rising">Rising</option>
+                                    <option value="falling">Falling</option>
+                                    <option value="both">Both</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex gap-10" style="margin-top: 20px;">
+                            <button class="btn btn-purple" onclick="updateSystemConfig()">⚙️ Apply</button>
+                            <button class="btn btn-blue" onclick="sendCommand('#SYS:RESET')">🔄 Reset System</button>
+                            <button class="btn btn-amber" onclick="sendCommand('#SYS:CALIBRATE')">🎯 Calibrate</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">📊 System Information</div>
+                        <div class="grid-2">
+                            <div class="stat-display">
+                                <div class="stat-label">CPU Usage</div>
+                                <div class="stat-value" id="cpu-usage" style="font-size: 20px;">0%</div>
+                            </div>
+                            <div class="stat-display">
+                                <div class="stat-label">Memory</div>
+                                <div class="stat-value accent" id="memory-usage" style="font-size: 20px;">0 MB</div>
+                            </div>
+                        </div>
+                        <div class="grid-2" style="margin-top: 15px;">
+                            <div class="stat-display">
+                                <div class="stat-label">Temperature</div>
+                                <div class="stat-value amber" id="temperature" style="font-size: 20px;">25°C</div>
+                            </div>
+                            <div class="stat-display">
+                                <div class="stat-label">Uptime</div>
+                                <div class="stat-value" id="uptime" style="font-size: 16px;">00:00:00</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="card">
-                    <div class="card-title">Shared Notes</div>
-                    <div id="shared-notes" style="max-height: 200px; overflow-y: auto; font-family: var(--FONT_MONO); font-size: 12px; color: var(--TEXT_MUTED);">
-                        No shared notes available...
+                    <div class="card-title">🔍 Debug Console</div>
+                    <div class="log-area" id="debug-console">
+                        Debug console ready...
+                    </div>
+                    <div class="flex gap-10" style="margin-top: 10px;">
+                        <button class="btn btn-blue" onclick="clearDebugConsole()">🗑️ Clear</button>
+                        <button class="btn btn-amber" onclick="exportDebugLog()">📤 Export Log</button>
+                        <button class="btn btn-purple" onclick="toggleDebugMode()">🔧 Debug Mode</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="analytics" class="tab-content">
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">📈 Real-time Analytics</div>
+                        <div class="chart-container" style="height: 300px;">
+                            <canvas id="analyticsChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">📊 Performance Metrics</div>
+                        <div class="grid-2">
+                            <div class="stat-display">
+                                <div class="stat-label">Data Rate</div>
+                                <div class="stat-value" id="data-rate" style="font-size: 18px;">0 kB/s</div>
+                            </div>
+                            <div class="stat-display">
+                                <div class="stat-label">Latency</div>
+                                <div class="stat-value accent" id="latency" style="font-size: 18px;">0 ms</div>
+                            </div>
+                        </div>
+                        <div class="grid-2" style="margin-top: 15px;">
+                            <div class="stat-display">
+                                <div class="stat-label">Packet Loss</div>
+                                <div class="stat-value amber" id="packet-loss" style="font-size: 18px;">0%</div>
+                            </div>
+                            <div class="stat-display">
+                                <div class="stat-label">Signal Quality</div>
+                                <div class="stat-value" id="signal-quality" style="font-size: 18px;">100%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">📋 Session History</div>
+                    <div id="session-history" style="font-family: var(--FONT_MONO); font-size: 12px; color: var(--TEXT_MUTED); max-height: 200px; overflow-y: auto;">
+                        No session history available...
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Status Bar -->
+        <!-- Advanced Status Bar -->
         <div class="status-bar">
             <div>
                 <span id="session-info">No Session</span>
+                <span style="margin-left: 20px;">📡 Signal: <span id="signal-strength">Strong</span></span>
+                <span style="margin-left: 20px;">🌐 Network: <span id="network-status">Online</span></span>
             </div>
             <div>
                 <span id="timestamp">--:--:--</span>
+                <span style="margin-left: 20px;">⚡ FPS: <span id="fps">60</span></span>
             </div>
         </div>
     </div>
@@ -774,23 +1459,28 @@
         let base_topic = "";
         let currentTab = 'oscilloscope';
         let dsoChart = null;
+        let analyticsChart = null;
+        let debugMode = false;
         
         const protocols = ["I2C", "SPI", "UART", "1-Wire", "CAN", "LIN", "PWM", "Manchester", "NRZ", 
                          "Modbus", "Profibus", "Bluetooth", "USB", "Ethernet", "MIDI"];
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            initChart();
+            initCharts();
             initProtocolGrid();
+            initParticles();
             updateTimestamp();
             setInterval(updateTimestamp, 1000);
             loadLocalNotes();
+            initAnimations();
         });
 
         // Theme management
         function changeTheme(theme) {
             document.body.setAttribute('data-theme', theme);
             localStorage.setItem('stm32-lab-theme', theme);
+            updateParticles();
         }
 
         // Load saved theme
@@ -812,21 +1502,27 @@
             document.getElementById(tabName).classList.add('active');
             event.target.classList.add('active');
             currentTab = tabName;
+            
+            // Animate tab change
+            gsap.from(`#${tabName}`, {duration: 0.5, y: 20, opacity: 0, ease: "power2.out"});
         }
 
         // Connection management
         function showAuthPanel() {
             document.getElementById('auth-panel').style.display = 'block';
+            gsap.from('#auth-panel', {duration: 0.5, scale: 0.8, opacity: 0, ease: "back.out(1.7)"});
         }
 
         function hideAuthPanel() {
-            document.getElementById('auth-panel').style.display = 'none';
+            gsap.to('#auth-panel', {duration: 0.3, scale: 0.8, opacity: 0, ease: "power2.in", onComplete: () => {
+                document.getElementById('auth-panel').style.display = 'none';
+            }});
         }
 
         function connect_cloud() {
             const sid = document.getElementById("session-id").value.toUpperCase().trim();
             if (sid.length !== 6) {
-                alert("Invalid Session ID. Must be 6 characters.");
+                showNotification("Invalid Session ID. Must be 6 characters.", 'error');
                 return;
             }
             
@@ -850,6 +1546,10 @@
                 client.subscribe(`${base_topic}/logs`);
                 client.subscribe(`${base_topic}/notes`);
                 client.subscribe(`${base_topic}/protocol`);
+                client.subscribe(`${base_topic}/system`);
+                
+                // Start animations
+                gsap.to('.status-indicator', {duration: 1, scale: 1.2, repeat: -1, yoyo: true, ease: "power2.inOut"});
             });
 
             client.on("message", (topic, message) => {
@@ -862,6 +1562,8 @@
                         handleSharedNotes(payload);
                     } else if (topic.includes('/protocol')) {
                         handleProtocolData(payload);
+                    } else if (topic.includes('/system')) {
+                        handleSystemData(payload);
                     } else {
                         // Handle oscilloscope data
                         if (payload.s && payload.s.length > 0) {
@@ -871,21 +1573,39 @@
                         
                         // Update statistics
                         if (payload.st) {
-                            if (payload.st.mean !== undefined) document.getElementById("stat-mean").textContent = payload.st.mean.toFixed(3) + " V";
-                            if (payload.st.vpp !== undefined) document.getElementById("stat-vpp").textContent = payload.st.vpp.toFixed(3) + " V";
-                            if (payload.st.dom_freq !== undefined) document.getElementById("stat-freq").textContent = payload.st.dom_freq.toFixed(1) + " Hz";
+                            if (payload.st.mean !== undefined) {
+                                document.getElementById("stat-mean").textContent = payload.st.mean.toFixed(3) + " V";
+                                animateValue('stat-mean', payload.st.mean);
+                            }
+                            if (payload.st.vpp !== undefined) {
+                                document.getElementById("stat-vpp").textContent = payload.st.vpp.toFixed(3) + " V";
+                                animateValue('stat-vpp', payload.st.vpp);
+                            }
+                            if (payload.st.dom_freq !== undefined) {
+                                document.getElementById("stat-freq").textContent = payload.st.dom_freq.toFixed(1) + " Hz";
+                                animateValue('stat-freq', payload.st.dom_freq);
+                            }
                         }
                         
                         // Update instrument readings
-                        if (payload.mm) document.getElementById("mm-reading").textContent = payload.mm.toFixed(3) + " V";
+                        if (payload.mm) {
+                            document.getElementById("mm-reading").textContent = payload.mm.toFixed(3) + " V";
+                            updateMMHistory(payload.mm);
+                        }
                         if (payload.fg) {
                             if (payload.fg.wave) document.getElementById("fg-wave").textContent = payload.fg.wave;
                             if (payload.fg.freq) document.getElementById("fg-freq").textContent = payload.fg.freq + " Hz";
                             if (payload.fg.amp) document.getElementById("fg-amp").textContent = payload.fg.amp + "V";
                         }
                         if (payload.pid) {
-                            if (payload.pid.output !== undefined) document.getElementById("pid-output").textContent = payload.pid.output.toFixed(3);
-                            if (payload.pid.error !== undefined) document.getElementById("pid-error").textContent = payload.pid.error.toFixed(3);
+                            if (payload.pid.output !== undefined) {
+                                document.getElementById("pid-output").textContent = payload.pid.output.toFixed(3);
+                                animateValue('pid-output', payload.pid.output);
+                            }
+                            if (payload.pid.error !== undefined) {
+                                document.getElementById("pid-error").textContent = payload.pid.error.toFixed(3);
+                                animateValue('pid-error', payload.pid.error);
+                            }
                         }
                     }
                 } catch (e) {
@@ -922,13 +1642,16 @@
             const indicator = document.getElementById("status-indicator");
             if (connected) {
                 indicator.classList.add("connected");
+                gsap.to(indicator, {duration: 0.5, boxShadow: "0 0 20px rgba(0, 255, 136, 0.8)"});
             } else {
                 indicator.classList.remove("connected");
+                gsap.to(indicator, {duration: 0.5, boxShadow: "0 0 5px rgba(255, 51, 85, 0.5)"});
             }
         }
 
         // Chart initialization
-        function initChart() {
+        function initCharts() {
+            // DSO Chart
             const ctx = document.getElementById('dsoChart').getContext('2d');
             dsoChart = new Chart(ctx, {
                 type: 'line',
@@ -963,18 +1686,56 @@
                     }
                 }
             });
+
+            // Analytics Chart
+            const analyticsCtx = document.getElementById('analyticsChart').getContext('2d');
+            analyticsChart = new Chart(analyticsCtx, {
+                type: 'line',
+                data: {
+                    labels: Array(50).fill(''),
+                    datasets: [{
+                        label: 'Data Rate',
+                        data: Array(50).fill(0),
+                        borderColor: 'var(--ACCENT_BLUE)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {duration: 750},
+                    scales: {
+                        x: { display: false },
+                        y: { 
+                            grid: { color: 'var(--BORDER)' }, 
+                            ticks: { color: 'var(--TEXT_MUTED)' }, 
+                            suggestedMin: 0
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
         }
 
         // Protocol grid initialization
         function initProtocolGrid() {
             const grid = document.getElementById('protocol-grid');
-            protocols.forEach(proto => {
+            protocols.forEach((proto, index) => {
                 const btn = document.createElement('button');
                 btn.className = 'protocol-btn';
                 btn.textContent = proto;
                 btn.onclick = () => selectProtocol(proto);
+                btn.style.animationDelay = `${index * 0.1}s`;
                 grid.appendChild(btn);
             });
+            
+            // Animate buttons appearing
+            gsap.from('.protocol-btn', {duration: 0.5, scale: 0, opacity: 0, stagger: 0.1, ease: "back.out(1.7)"});
         }
 
         function selectProtocol(proto) {
@@ -985,6 +1746,8 @@
                 btn.classList.remove('active');
                 if (btn.textContent === proto) {
                     btn.classList.add('active');
+                    gsap.to(btn, {duration: 0.3, scale: 1.1, ease: "power2.out"});
+                    gsap.to(btn, {duration: 0.3, scale: 1, delay: 0.2, ease: "power2.inOut"});
                 }
             });
             
@@ -996,18 +1759,51 @@
             const resultsDiv = document.getElementById('protocol-results');
             if (data.results && data.results.length > 0) {
                 let html = '<table style="width: 100%; border-collapse: collapse;">';
-                html += '<tr style="border-bottom: 1px solid var(--BORDER);"><th style="padding: 5px; text-align: left;">Time</th><th style="padding: 5px; text-align: left;">Protocol</th><th style="padding: 5px; text-align: left;">Info</th></tr>';
-                data.results.forEach(result => {
+                html += '<tr style="border-bottom: 2px solid var(--BORDER);"><th style="padding: 8px; text-align: left; color: var(--PRIMARY);">Time</th><th style="padding: 8px; text-align: left; color: var(--PRIMARY);">Protocol</th><th style="padding: 8px; text-align: left; color: var(--PRIMARY);">Info</th></tr>';
+                data.results.forEach((result, index) => {
                     html += `<tr style="border-bottom: 1px solid var(--BORDER);">
-                        <td style="padding: 5px;">${result.time_ms}</td>
-                        <td style="padding: 5px; color: var(--PRIMARY);">${result.proto}</td>
-                        <td style="padding: 5px;">${result.info}</td>
+                        <td style="padding: 8px;">${result.time_ms}</td>
+                        <td style="padding: 8px; color: var(--PRIMARY); font-weight: 600;">${result.proto}</td>
+                        <td style="padding: 8px;">${result.info}</td>
                     </tr>`;
                 });
                 html += '</table>';
                 resultsDiv.innerHTML = html;
+                
+                // Update statistics
+                document.getElementById('proto-packets').textContent = data.results.length;
+                document.getElementById('proto-errors').textContent = '0%';
+                
+                // Animate results
+                gsap.from('#protocol-results', {duration: 0.5, y: 20, opacity: 0, ease: "power2.out"});
             } else {
                 resultsDiv.innerHTML = 'No protocol data decoded yet...';
+            }
+        }
+
+        function handleSystemData(data) {
+            if (data.cpu !== undefined) {
+                document.getElementById('cpu-usage').textContent = data.cpu + '%';
+                animateValue('cpu-usage', data.cpu);
+            }
+            if (data.memory !== undefined) {
+                document.getElementById('memory-usage').textContent = data.memory + ' MB';
+                animateValue('memory-usage', data.memory);
+            }
+            if (data.temperature !== undefined) {
+                document.getElementById('temperature').textContent = data.temperature + '°C';
+                animateValue('temperature', data.temperature);
+            }
+            if (data.uptime !== undefined) {
+                document.getElementById('uptime').textContent = data.uptime;
+            }
+            if (data.latency !== undefined) {
+                document.getElementById('latency').textContent = data.latency + ' ms';
+                animateValue('latency', data.latency);
+            }
+            if (data.signal_quality !== undefined) {
+                document.getElementById('signal-quality').textContent = data.signal_quality + '%';
+                animateValue('signal-quality', data.signal_quality);
             }
         }
 
@@ -1016,8 +1812,14 @@
             if (client && client.connected) {
                 client.publish(`${base_topic}/cmds`, cmd);
                 addLogEntry(cmd, 'tx');
+                
+                // Animate button press
+                if (event && event.target) {
+                    gsap.to(event.target, {duration: 0.1, scale: 0.95, ease: "power2.out"});
+                    gsap.to(event.target, {duration: 0.1, scale: 1, delay: 0.1, ease: "power2.inOut"});
+                }
             } else {
-                alert("Not connected to cloud relay.");
+                showNotification("Not connected to cloud relay.", 'error');
             }
         }
 
@@ -1032,12 +1834,33 @@
             addLogEntry(`PID params updated: Kp=${kp}, Ki=${ki}, Kd=${kd}, Setpoint=${setpoint}`, 'info');
         }
 
+        function updateFGParams() {
+            const amplitude = document.getElementById('fg-amplitude').value;
+            const offset = document.getElementById('fg-offset').value;
+            
+            const cmd = `#FG:PARAMS ${amplitude},${offset}`;
+            sendCommand(cmd);
+            addLogEntry(`Function generator params updated: Amp=${amplitude}V, Offset=${offset}V`, 'info');
+        }
+
+        function updateSystemConfig() {
+            const sampleRate = document.getElementById('sample-rate').value;
+            const bufferSize = document.getElementById('buffer-size').value;
+            const triggerLevel = document.getElementById('trigger-level').value;
+            const triggerEdge = document.getElementById('trigger-edge').value;
+            
+            const cmd = `#SYS:CONFIG ${sampleRate},${bufferSize},${triggerLevel},${triggerEdge}`;
+            sendCommand(cmd);
+            addLogEntry(`System config updated: SR=${sampleRate}, Buffer=${bufferSize}, Trigger=${triggerLevel}V (${triggerEdge})`, 'info');
+        }
+
         // Notes functionality
         function saveNotes() {
             const notes = document.getElementById('notes-area').value;
             localStorage.setItem('stm32-lab-notes', notes);
             localStorage.setItem('stm32-lab-notes-timestamp', new Date().toISOString());
             addLogEntry('Notes saved locally', 'info');
+            showNotification('Notes saved successfully!', 'success');
         }
 
         function loadNotes() {
@@ -1048,8 +1871,9 @@
                 document.getElementById('notes-area').value = notes;
                 const date = timestamp ? new Date(timestamp).toLocaleString() : 'Unknown';
                 addLogEntry(`Notes loaded from ${date}`, 'info');
+                showNotification('Notes loaded successfully!', 'success');
             } else {
-                addLogEntry('No saved notes found', 'info');
+                showNotification('No saved notes found', 'warning');
             }
         }
 
@@ -1066,12 +1890,13 @@
                 localStorage.removeItem('stm32-lab-notes');
                 localStorage.removeItem('stm32-lab-notes-timestamp');
                 addLogEntry('Notes cleared', 'info');
+                showNotification('Notes cleared', 'info');
             }
         }
 
         function shareNotes() {
             if (!client || !client.connected) {
-                alert('Must be connected to share notes');
+                showNotification('Must be connected to share notes', 'error');
                 return;
             }
             
@@ -1088,6 +1913,19 @@
             
             client.publish(`${base_topic}/notes`, JSON.stringify(noteData));
             addLogEntry(`Notes shared by ${author}`, 'info');
+            showNotification('Notes shared successfully!', 'success');
+        }
+
+        function exportNotes() {
+            const notes = document.getElementById('notes-area').value;
+            const blob = new Blob([notes], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `stm32-lab-notes-${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showNotification('Notes exported successfully!', 'success');
         }
 
         function handleSharedNotes(noteData) {
@@ -1095,11 +1933,11 @@
             const date = new Date(noteData.timestamp).toLocaleString();
             
             const noteHtml = `
-                <div style="border-bottom: 1px solid var(--BORDER); padding: 10px 0; margin-bottom: 10px;">
-                    <div style="color: var(--PRIMARY); font-weight: 600; margin-bottom: 5px;">
-                        ${noteData.author} - ${date}
+                <div style="border-bottom: 1px solid var(--BORDER); padding: 12px; margin-bottom: 10px; border-radius: 8px; background: rgba(var(--CARD_BG), 0.5);">
+                    <div style="color: var(--PRIMARY); font-weight: 600; margin-bottom: 8px;">
+                        👤 ${noteData.author} - 📅 ${date}
                     </div>
-                    <div style="color: var(--TEXT); white-space: pre-wrap;">
+                    <div style="color: var(--TEXT); white-space: pre-wrap; line-height: 1.5;">
                         ${noteData.content}
                     </div>
                 </div>
@@ -1112,12 +1950,48 @@
             while (notes.length > 10) {
                 sharedDiv.removeChild(notes[notes.length - 1]);
             }
+            
+            // Animate new note
+            gsap.from(sharedDiv.firstChild, {duration: 0.5, x: -50, opacity: 0, ease: "power2.out"});
         }
 
-        // Log management
-        function addLogEntry(message, type = 'rx') {
-            // This would add to a log area if we had one visible
-            console.log(`[${type.toUpperCase()}] ${message}`);
+        function updateMMHistory(reading) {
+            const historyDiv = document.getElementById('mm-history');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = `<div style="padding: 4px; border-bottom: 1px solid var(--BORDER);">
+                <span style="color: var(--PRIMARY);">${timestamp}</span> - 
+                <span style="color: var(--TEXT);">${reading.toFixed(3)} V</span>
+            </div>`;
+            
+            historyDiv.innerHTML = entry + historyDiv.innerHTML;
+            
+            // Keep only last 20 readings
+            const readings = historyDiv.children;
+            while (readings.length > 20) {
+                historyDiv.removeChild(readings[readings.length - 1]);
+            }
+        }
+
+        // Debug console
+        function clearDebugConsole() {
+            document.getElementById('debug-console').innerHTML = 'Debug console cleared...';
+        }
+
+        function exportDebugLog() {
+            const debugContent = document.getElementById('debug-console').textContent;
+            const blob = new Blob([debugContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `stm32-lab-debug-${new Date().toISOString().split('T')[0]}.log`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showNotification('Debug log exported!', 'success');
+        }
+
+        function toggleDebugMode() {
+            debugMode = !debugMode;
+            showNotification(`Debug mode ${debugMode ? 'enabled' : 'disabled'}`, 'info');
         }
 
         // Utility functions
@@ -1125,6 +1999,106 @@
             const now = new Date();
             const timeStr = now.toLocaleTimeString();
             document.getElementById('timestamp').textContent = timeStr;
+            
+            // Update FPS
+            if (window.fps) {
+                document.getElementById('fps').textContent = window.fps;
+            }
+        }
+
+        function animateValue(elementId, value) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                gsap.to(element, {duration: 0.5, textContent: value.toFixed(3), ease: "power2.out"});
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'error' ? 'var(--ACCENT_RED)' : type === 'warning' ? 'var(--ACCENT_AMBER)' : 'var(--PRIMARY)'};
+                color: var(--DARK_BG);
+                padding: 15px 20px;
+                border-radius: 8px;
+                font-weight: 600;
+                z-index: 10000;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                transform: translateX(400px);
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            gsap.to(notification, {duration: 0.5, x: 0, ease: "power2.out"});
+            
+            setTimeout(() => {
+                gsap.to(notification, {duration: 0.5, x: 400, ease: "power2.in", onComplete: () => {
+                    document.body.removeChild(notification);
+                }});
+            }, 3000);
+        }
+
+        function addLogEntry(message, type = 'rx') {
+            const debugConsole = document.getElementById('debug-console');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = `<div class="log-entry ${type}">[${timestamp}] ${message}</div>`;
+            debugConsole.innerHTML = entry + debugConsole.innerHTML;
+            
+            // Keep only last 100 entries
+            const entries = debugConsole.children;
+            while (entries.length > 100) {
+                debugConsole.removeChild(entries[entries.length - 1]);
+            }
+        }
+
+        // Particle system
+        function initParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 10 + 's';
+                particle.style.animationDuration = (10 + Math.random() * 10) + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        function updateParticles() {
+            const particles = document.querySelectorAll('.particle');
+            particles.forEach(particle => {
+                particle.style.background = getComputedStyle(document.body).getPropertyValue('--PRIMARY');
+            });
+        }
+
+        // Initialize animations
+        function initAnimations() {
+            // Animate cards on load
+            gsap.from('.card', {duration: 0.8, y: 30, opacity: 0, stagger: 0.1, ease: "power2.out"});
+            
+            // Animate stat displays
+            gsap.from('.stat-display', {duration: 1, scale: 0.8, opacity: 0, stagger: 0.1, ease: "back.out(1.7)"});
+            
+            // Animate buttons
+            gsap.from('.btn', {duration: 0.6, y: 20, opacity: 0, stagger: 0.05, ease: "power2.out"});
+            
+            // FPS counter
+            let lastTime = performance.now();
+            let frames = 0;
+            
+            function updateFPS() {
+                frames++;
+                const currentTime = performance.now();
+                if (currentTime >= lastTime + 1000) {
+                    window.fps = Math.round(frames * 1000 / (currentTime - lastTime));
+                    frames = 0;
+                    lastTime = currentTime;
+                }
+                requestAnimationFrame(updateFPS);
+            }
+            updateFPS();
         }
     </script>
 </body>
