@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>STM32 Mobile Session Interface</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <script>
+        // Check if Paho MQTT is loaded
+        if (typeof Paho === 'undefined') {
+            console.error('Paho MQTT library not loaded');
+            alert('MQTT library failed to load. Please check your internet connection and refresh the page.');
+        } else {
+            console.log('Paho MQTT library loaded successfully');
+        }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -718,6 +727,16 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
+            // Check if Paho MQTT is available
+            if (typeof Paho === 'undefined') {
+                console.error('Paho MQTT library not loaded');
+                updateConnectionStatus('MQTT Library Error');
+                addMessage('error', 'MQTT library failed to load. Please refresh the page.');
+                return;
+            }
+
+            console.log('Paho MQTT library loaded successfully');
+            
             // Set up input listeners
             document.getElementById('amplitude').addEventListener('input', function(e) {
                 document.getElementById('amp-value').textContent = e.target.value + 'V';
@@ -749,6 +768,12 @@
 
         function connectMQTT() {
             if (isConnected) return;
+
+            // Check if Paho MQTT is available
+            if (typeof Paho === 'undefined') {
+                addMessage('error', 'MQTT library not available. Please refresh the page.');
+                return;
+            }
 
             try {
                 // Get session ID from input
